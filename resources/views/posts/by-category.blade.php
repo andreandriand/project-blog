@@ -6,15 +6,15 @@
     <div class="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
             <nav class="flex items-center text-sm text-gray-500 dark:text-gray-400 mb-4 space-x-2">
-                <a href="{{ route('home') }}" class="hover:text-primary-600">Beranda</a>
+                <a href="{{ route('home') }}" class="hover:text-primary-600">{{ __('Beranda') }}</a>
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
-                <span>Kategori</span>
+                <span>{{ __('Kategori') }}</span>
             </nav>
             <h1 class="text-3xl font-bold text-gray-900 dark:text-white">{{ $category->name }}</h1>
             @if($category->description)
                 <p class="mt-2 text-gray-500 dark:text-gray-400">{{ $category->description }}</p>
             @endif
-            <p class="mt-1 text-sm text-gray-400 dark:text-gray-500">{{ $posts->total() }} artikel</p>
+            <p class="mt-1 text-sm text-gray-400 dark:text-gray-500">{{ __(':count artikel', ['count' => $posts->total()]) }}</p>
         </div>
     </div>
 
@@ -48,7 +48,7 @@
             <div class="mt-8">{{ $posts->links() }}</div>
         @else
             <div class="text-center py-16">
-                <p class="text-gray-500 dark:text-gray-400">Belum ada artikel dalam kategori ini.</p>
+                <p class="text-gray-500 dark:text-gray-400">{{ __('Belum ada artikel dalam kategori ini.') }}</p>
             </div>
         @endif
     </div>

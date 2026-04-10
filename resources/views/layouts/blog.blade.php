@@ -38,21 +38,26 @@
                 {{-- Desktop Nav --}}
                 <div class="hidden md:flex items-center space-x-1">
                     <a href="{{ route('home') }}" class="px-4 py-2 rounded-lg text-sm font-medium {{ request()->routeIs('home') ? 'bg-primary-50 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300' : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800' }} transition-colors">
-                        Beranda
+                        {{ __('Beranda') }}
                     </a>
                     <a href="{{ route('posts.index') }}" class="px-4 py-2 rounded-lg text-sm font-medium {{ request()->routeIs('posts.*') ? 'bg-primary-50 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300' : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800' }} transition-colors">
-                        Blog
+                        {{ __('Blog') }}
                     </a>
                     <a href="{{ route('about') }}" class="px-4 py-2 rounded-lg text-sm font-medium {{ request()->routeIs('about') ? 'bg-primary-50 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300' : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800' }} transition-colors">
-                        Tentang
+                        {{ __('Tentang') }}
                     </a>
                     <a href="{{ route('contact') }}" class="px-4 py-2 rounded-lg text-sm font-medium {{ request()->routeIs('contact') ? 'bg-primary-50 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300' : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800' }} transition-colors">
-                        Kontak
+                        {{ __('Kontak') }}
                     </a>
                 </div>
 
                 {{-- Right Side --}}
                 <div class="flex items-center space-x-3">
+                    {{-- Language Toggle --}}
+                    <a href="{{ route('locale.switch', app()->getLocale() === 'id' ? 'en' : 'id') }}" class="px-2 py-1 rounded-lg text-xs font-bold text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors border border-gray-200 dark:border-gray-700" title="{{ __('Ganti Bahasa') }}">
+                        {{ app()->getLocale() === 'id' ? 'EN' : 'ID' }}
+                    </a>
+
                     {{-- Dark Mode Toggle --}}
                     <button @click="darkMode = !darkMode" class="p-2 rounded-lg text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors" title="Toggle dark mode">
                         <svg x-show="!darkMode" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -73,11 +78,11 @@
                         @endif
                         <form method="POST" action="{{ route('logout') }}" class="hidden sm:block">
                             @csrf
-                            <button type="submit" class="text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors">Logout</button>
+                            <button type="submit" class="text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors">{{ __('Logout') }}</button>
                         </form>
                     @else
-                        <a href="{{ route('login') }}" class="hidden sm:inline-flex text-sm font-medium text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white transition-colors">Login</a>
-                        <a href="{{ route('register') }}" class="hidden sm:inline-flex btn-primary text-xs">Daftar</a>
+                        <a href="{{ route('login') }}" class="hidden sm:inline-flex text-sm font-medium text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white transition-colors">{{ __('Login') }}</a>
+                        <a href="{{ route('register') }}" class="hidden sm:inline-flex btn-primary text-xs">{{ __('Daftar') }}</a>
                     @endauth
 
                     {{-- Mobile Menu Button --}}
@@ -92,21 +97,21 @@
         {{-- Mobile Menu --}}
         <div x-show="mobileOpen" x-cloak x-transition:enter="transition ease-out duration-200" x-transition:enter-start="opacity-0 -translate-y-1" x-transition:enter-end="opacity-100 translate-y-0" x-transition:leave="transition ease-in duration-150" x-transition:leave-start="opacity-100 translate-y-0" x-transition:leave-end="opacity-0 -translate-y-1" class="md:hidden border-t border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900">
             <div class="px-4 py-3 space-y-1">
-                <a href="{{ route('home') }}" class="block px-3 py-2 rounded-lg text-sm font-medium {{ request()->routeIs('home') ? 'bg-primary-50 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300' : 'text-gray-600 dark:text-gray-300' }}">Beranda</a>
-                <a href="{{ route('posts.index') }}" class="block px-3 py-2 rounded-lg text-sm font-medium {{ request()->routeIs('posts.*') ? 'bg-primary-50 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300' : 'text-gray-600 dark:text-gray-300' }}">Blog</a>
-                <a href="{{ route('about') }}" class="block px-3 py-2 rounded-lg text-sm font-medium text-gray-600 dark:text-gray-300">Tentang</a>
-                <a href="{{ route('contact') }}" class="block px-3 py-2 rounded-lg text-sm font-medium text-gray-600 dark:text-gray-300">Kontak</a>
+                <a href="{{ route('home') }}" class="block px-3 py-2 rounded-lg text-sm font-medium {{ request()->routeIs('home') ? 'bg-primary-50 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300' : 'text-gray-600 dark:text-gray-300' }}">{{ __('Beranda') }}</a>
+                <a href="{{ route('posts.index') }}" class="block px-3 py-2 rounded-lg text-sm font-medium {{ request()->routeIs('posts.*') ? 'bg-primary-50 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300' : 'text-gray-600 dark:text-gray-300' }}">{{ __('Blog') }}</a>
+                <a href="{{ route('about') }}" class="block px-3 py-2 rounded-lg text-sm font-medium text-gray-600 dark:text-gray-300">{{ __('Tentang') }}</a>
+                <a href="{{ route('contact') }}" class="block px-3 py-2 rounded-lg text-sm font-medium text-gray-600 dark:text-gray-300">{{ __('Kontak') }}</a>
                 @auth
                     @if(auth()->user()->isAdmin())
-                        <a href="{{ route('admin.dashboard') }}" class="block px-3 py-2 rounded-lg text-sm font-medium text-primary-600 dark:text-primary-400">Admin Panel</a>
+                        <a href="{{ route('admin.dashboard') }}" class="block px-3 py-2 rounded-lg text-sm font-medium text-primary-600 dark:text-primary-400">{{ __('Admin Panel') }}</a>
                     @endif
                     <form method="POST" action="{{ route('logout') }}">
                         @csrf
-                        <button type="submit" class="block w-full text-left px-3 py-2 rounded-lg text-sm font-medium text-gray-600 dark:text-gray-300">Logout</button>
+                        <button type="submit" class="block w-full text-left px-3 py-2 rounded-lg text-sm font-medium text-gray-600 dark:text-gray-300">{{ __('Logout') }}</button>
                     </form>
                 @else
-                    <a href="{{ route('login') }}" class="block px-3 py-2 rounded-lg text-sm font-medium text-gray-600 dark:text-gray-300">Login</a>
-                    <a href="{{ route('register') }}" class="block px-3 py-2 rounded-lg text-sm font-medium text-primary-600 dark:text-primary-400">Daftar</a>
+                    <a href="{{ route('login') }}" class="block px-3 py-2 rounded-lg text-sm font-medium text-gray-600 dark:text-gray-300">{{ __('Login') }}</a>
+                    <a href="{{ route('register') }}" class="block px-3 py-2 rounded-lg text-sm font-medium text-primary-600 dark:text-primary-400">{{ __('Daftar') }}</a>
                 @endauth
             </div>
         </div>
@@ -145,24 +150,24 @@
                         <span class="text-xl font-bold bg-gradient-to-r from-primary-600 to-purple-600 bg-clip-text text-transparent">{{ config('app.name') }}</span>
                     </a>
                     <p class="text-gray-500 dark:text-gray-400 text-sm max-w-md">
-                        Platform blog modern untuk berbagi ide, cerita, dan pengetahuan. Dibangun dengan teknologi terkini untuk pengalaman membaca terbaik.
+                        {{ __('Platform blog modern untuk berbagi ide, cerita, dan pengetahuan. Dibangun dengan teknologi terkini untuk pengalaman membaca terbaik.') }}
                     </p>
                 </div>
 
                 {{-- Quick Links --}}
                 <div>
-                    <h3 class="text-sm font-semibold text-gray-900 dark:text-white uppercase tracking-wider mb-4">Navigasi</h3>
+                    <h3 class="text-sm font-semibold text-gray-900 dark:text-white uppercase tracking-wider mb-4">{{ __('Navigasi') }}</h3>
                     <ul class="space-y-2">
-                        <li><a href="{{ route('home') }}" class="text-sm text-gray-500 dark:text-gray-400 hover:text-primary-600 dark:hover:text-primary-400 transition-colors">Beranda</a></li>
-                        <li><a href="{{ route('posts.index') }}" class="text-sm text-gray-500 dark:text-gray-400 hover:text-primary-600 dark:hover:text-primary-400 transition-colors">Blog</a></li>
-                        <li><a href="{{ route('about') }}" class="text-sm text-gray-500 dark:text-gray-400 hover:text-primary-600 dark:hover:text-primary-400 transition-colors">Tentang</a></li>
-                        <li><a href="{{ route('contact') }}" class="text-sm text-gray-500 dark:text-gray-400 hover:text-primary-600 dark:hover:text-primary-400 transition-colors">Kontak</a></li>
+                        <li><a href="{{ route('home') }}" class="text-sm text-gray-500 dark:text-gray-400 hover:text-primary-600 dark:hover:text-primary-400 transition-colors">{{ __('Beranda') }}</a></li>
+                        <li><a href="{{ route('posts.index') }}" class="text-sm text-gray-500 dark:text-gray-400 hover:text-primary-600 dark:hover:text-primary-400 transition-colors">{{ __('Blog') }}</a></li>
+                        <li><a href="{{ route('about') }}" class="text-sm text-gray-500 dark:text-gray-400 hover:text-primary-600 dark:hover:text-primary-400 transition-colors">{{ __('Tentang') }}</a></li>
+                        <li><a href="{{ route('contact') }}" class="text-sm text-gray-500 dark:text-gray-400 hover:text-primary-600 dark:hover:text-primary-400 transition-colors">{{ __('Kontak') }}</a></li>
                     </ul>
                 </div>
 
                 {{-- Social --}}
                 <div>
-                    <h3 class="text-sm font-semibold text-gray-900 dark:text-white uppercase tracking-wider mb-4">Ikuti Kami</h3>
+                    <h3 class="text-sm font-semibold text-gray-900 dark:text-white uppercase tracking-wider mb-4">{{ __('Ikuti Kami') }}</h3>
                     <div class="flex space-x-3">
                         <a href="#" class="w-10 h-10 bg-gray-100 dark:bg-gray-700 rounded-lg flex items-center justify-center text-gray-500 dark:text-gray-400 hover:bg-primary-100 dark:hover:bg-primary-900/30 hover:text-primary-600 dark:hover:text-primary-400 transition-colors">
                             <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M24 4.557c-.883.392-1.832.656-2.828.775 1.017-.609 1.798-1.574 2.165-2.724-.951.564-2.005.974-3.127 1.195-.897-.957-2.178-1.555-3.594-1.555-3.179 0-5.515 2.966-4.797 6.045-4.091-.205-7.719-2.165-10.148-5.144-1.29 2.213-.669 5.108 1.523 6.574-.806-.026-1.566-.247-2.229-.616-.054 2.281 1.581 4.415 3.949 4.89-.693.188-1.452.232-2.224.084.626 1.956 2.444 3.379 4.6 3.419-2.07 1.623-4.678 2.348-7.29 2.04 2.179 1.397 4.768 2.212 7.548 2.212 9.142 0 14.307-7.721 13.995-14.646.962-.695 1.797-1.562 2.457-2.549z"/></svg>
@@ -179,9 +184,9 @@
 
             <div class="border-t border-gray-200 dark:border-gray-700 mt-8 pt-8 text-center">
                 <p class="text-sm text-gray-500 dark:text-gray-400">
-                    &copy; {{ date('Y') }} {{ config('app.name') }}. Dibuat dengan
+                    &copy; {{ date('Y') }} {{ config('app.name') }}. {{ __('Dibuat dengan') }}
                     <svg class="inline w-4 h-4 text-red-500" fill="currentColor" viewBox="0 0 24 24"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>
-                    menggunakan Laravel & Tailwind CSS
+                    {{ __('menggunakan Laravel & Tailwind CSS') }}
                 </p>
             </div>
         </div>

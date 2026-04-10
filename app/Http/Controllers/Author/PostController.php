@@ -72,8 +72,8 @@ class PostController extends Controller
         }
 
         $message = $validated['status'] === 'pending'
-            ? 'Artikel berhasil dikirim untuk review!'
-            : 'Artikel berhasil disimpan sebagai draft!';
+            ? __('Artikel berhasil dikirim untuk review!')
+            : __('Artikel berhasil disimpan sebagai draft!');
 
         return redirect()->route('author.posts.index')->with('success', $message);
     }
@@ -124,8 +124,8 @@ class PostController extends Controller
         $post->tags()->sync($request->tags ?? []);
 
         $message = ($validated['status'] ?? $post->status) === 'pending'
-            ? 'Artikel berhasil dikirim untuk review!'
-            : 'Artikel berhasil diperbarui!';
+            ? __('Artikel berhasil dikirim untuk review!')
+            : __('Artikel berhasil diperbarui!');
 
         return redirect()->route('author.posts.index')->with('success', $message);
     }
@@ -140,7 +140,7 @@ class PostController extends Controller
 
         $post->delete();
 
-        return redirect()->route('author.posts.index')->with('success', 'Artikel berhasil dihapus!');
+        return redirect()->route('author.posts.index')->with('success', __('Artikel berhasil dihapus!'));
     }
 
     public function submitForReview(Post $post)
@@ -148,7 +148,7 @@ class PostController extends Controller
         $this->authorize('update', $post);
 
         if (! in_array($post->status, ['draft', 'rejected'])) {
-            return back()->with('error', 'Artikel ini tidak bisa disubmit untuk review.');
+            return back()->with('error', __('Artikel ini tidak bisa disubmit untuk review.'));
         }
 
         $post->update([
@@ -156,6 +156,6 @@ class PostController extends Controller
             'rejection_reason' => null,
         ]);
 
-        return back()->with('success', 'Artikel berhasil dikirim untuk review!');
+        return back()->with('success', __('Artikel berhasil dikirim untuk review!'));
     }
 }

@@ -77,7 +77,7 @@ class PostController extends Controller
         }
 
         return redirect()->route('admin.posts.index')
-            ->with('success', 'Artikel berhasil dibuat!');
+            ->with('success', __('Artikel berhasil dibuat!'));
     }
 
     public function edit(Post $post)
@@ -120,7 +120,7 @@ class PostController extends Controller
         $post->tags()->sync($request->tags ?? []);
 
         return redirect()->route('admin.posts.index')
-            ->with('success', 'Artikel berhasil diperbarui!');
+            ->with('success', __('Artikel berhasil diperbarui!'));
     }
 
     public function destroy(Post $post)
@@ -132,7 +132,7 @@ class PostController extends Controller
         $post->delete();
 
         return redirect()->route('admin.posts.index')
-            ->with('success', 'Artikel berhasil dihapus!');
+            ->with('success', __('Artikel berhasil dihapus!'));
     }
 
     public function approve(Post $post)
@@ -143,7 +143,7 @@ class PostController extends Controller
             'rejection_reason' => null,
         ]);
 
-        return back()->with('success', 'Artikel berhasil dipublikasi!');
+        return back()->with('success', __('Artikel berhasil dipublikasi!'));
     }
 
     public function reject(Request $request, Post $post)
@@ -157,6 +157,6 @@ class PostController extends Controller
             'rejection_reason' => $request->rejection_reason,
         ]);
 
-        return back()->with('success', 'Artikel berhasil ditolak.');
+        return back()->with('success', __('Artikel berhasil ditolak.'));
     }
 }

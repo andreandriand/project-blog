@@ -14,19 +14,19 @@
         <div class="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-24 md:py-32">
             <div class="text-center">
                 <h1 class="text-4xl md:text-6xl font-extrabold text-white mb-6 leading-tight">
-                    Temukan Inspirasi<br>
-                    <span class="text-transparent bg-clip-text bg-gradient-to-r from-yellow-200 to-pink-200">di Setiap Tulisan</span>
+                    {{ __('Temukan Inspirasi') }}<br>
+                    <span class="text-transparent bg-clip-text bg-gradient-to-r from-yellow-200 to-pink-200">{{ __('di Setiap Tulisan') }}</span>
                 </h1>
                 <p class="text-lg md:text-xl text-white/80 max-w-2xl mx-auto mb-8">
-                    Jelajahi artikel-artikel menarik tentang teknologi, desain, dan pengembangan diri. Ditulis oleh para ahli untuk menginspirasi perjalanan Anda.
+                    {{ __('Jelajahi artikel-artikel menarik tentang teknologi, desain, dan pengembangan diri. Ditulis oleh para ahli untuk menginspirasi perjalanan Anda.') }}
                 </p>
                 <div class="flex flex-col sm:flex-row gap-4 justify-center">
                     <a href="{{ route('posts.index') }}" class="inline-flex items-center justify-center px-8 py-3 bg-white text-primary-700 font-semibold rounded-xl hover:bg-gray-100 transition-all shadow-lg hover:shadow-xl transform hover:-translate-y-0.5">
                         <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/></svg>
-                        Mulai Membaca
+                        {{ __('Mulai Membaca') }}
                     </a>
                     <a href="{{ route('about') }}" class="inline-flex items-center justify-center px-8 py-3 border-2 border-white/30 text-white font-semibold rounded-xl hover:bg-white/10 transition-all">
-                        Tentang Kami
+                        {{ __('Tentang Kami') }}
                     </a>
                 </div>
             </div>
@@ -72,11 +72,11 @@
     <section class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
         <div class="flex items-center justify-between mb-8">
             <div>
-                <h2 class="text-3xl font-bold text-gray-900 dark:text-white">Artikel Terbaru</h2>
-                <p class="mt-1 text-gray-500 dark:text-gray-400">Tulisan terbaru dari para penulis kami</p>
+                <h2 class="text-3xl font-bold text-gray-900 dark:text-white">{{ __('Artikel Terbaru') }}</h2>
+                <p class="mt-1 text-gray-500 dark:text-gray-400">{{ __('Tulisan terbaru dari para penulis kami') }}</p>
             </div>
             <a href="{{ route('posts.index') }}" class="hidden sm:inline-flex items-center text-primary-600 dark:text-primary-400 font-semibold hover:text-primary-700 dark:hover:text-primary-300 transition-colors">
-                Lihat Semua
+                {{ __('Lihat Semua') }}
                 <svg class="w-4 h-4 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
             </a>
         </div>
@@ -94,7 +94,7 @@
                             @if($post->category)
                                 <a href="{{ route('posts.category', $post->category->slug) }}" class="badge badge-primary">{{ $post->category->name }}</a>
                             @endif
-                            <span class="text-xs text-gray-500 dark:text-gray-400">{{ $post->reading_time }} min baca</span>
+                            <span class="text-xs text-gray-500 dark:text-gray-400">{{ $post->reading_time }} {{ __('min baca') }}</span>
                         </div>
                         <a href="{{ route('posts.show', $post->slug) }}">
                             <h3 class="text-lg font-bold text-gray-900 dark:text-white group-hover:text-primary-600 dark:group-hover:text-primary-400 transition-colors line-clamp-2">
@@ -122,8 +122,8 @@
             @empty
                 <div class="col-span-full text-center py-12">
                     <svg class="w-16 h-16 mx-auto text-gray-300 dark:text-gray-600 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 01-2-2V7m2 13a2 2 0 002-2V9a2 2 0 00-2-2h-2m-4-3H9M7 16h6M7 8h6v4H7V8z"/></svg>
-                    <h3 class="text-lg font-medium text-gray-500 dark:text-gray-400">Belum ada artikel</h3>
-                    <p class="text-sm text-gray-400 dark:text-gray-500">Artikel akan segera hadir!</p>
+                    <h3 class="text-lg font-medium text-gray-500 dark:text-gray-400">{{ __('Belum ada artikel') }}</h3>
+                    <p class="text-sm text-gray-400 dark:text-gray-500">{{ __('Artikel akan segera hadir!') }}</p>
                 </div>
             @endforelse
         </div>
@@ -134,8 +134,8 @@
     <section class="bg-white dark:bg-gray-800 py-16">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div class="text-center mb-10">
-                <h2 class="text-3xl font-bold text-gray-900 dark:text-white">Jelajahi Kategori</h2>
-                <p class="mt-2 text-gray-500 dark:text-gray-400">Temukan artikel berdasarkan topik yang Anda minati</p>
+                <h2 class="text-3xl font-bold text-gray-900 dark:text-white">{{ __('Jelajahi Kategori') }}</h2>
+                <p class="mt-2 text-gray-500 dark:text-gray-400">{{ __('Temukan artikel berdasarkan topik yang Anda minati') }}</p>
             </div>
             <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
                 @foreach($categories as $category)
@@ -144,7 +144,7 @@
                             <svg class="w-6 h-6 text-primary-600 dark:text-primary-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"/></svg>
                         </div>
                         <h3 class="font-semibold text-gray-900 dark:text-white group-hover:text-primary-700 dark:group-hover:text-primary-300 transition-colors">{{ $category->name }}</h3>
-                        <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">{{ $category->published_posts_count }} artikel</p>
+                        <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">{{ __(':count artikel', ['count' => $category->published_posts_count]) }}</p>
                     </a>
                 @endforeach
             </div>
@@ -157,12 +157,12 @@
         <div class="bg-gradient-to-r from-primary-600 to-purple-600 rounded-3xl p-8 md:p-12 text-center relative overflow-hidden">
             <div class="absolute inset-0 bg-grid-white/10"></div>
             <div class="relative">
-                <h2 class="text-2xl md:text-3xl font-bold text-white mb-3">Jangan Lewatkan Update Terbaru</h2>
-                <p class="text-white/80 max-w-xl mx-auto mb-6">Dapatkan notifikasi setiap ada artikel baru. Gratis dan tanpa spam!</p>
+                <h2 class="text-2xl md:text-3xl font-bold text-white mb-3">{{ __('Jangan Lewatkan Update Terbaru') }}</h2>
+                <p class="text-white/80 max-w-xl mx-auto mb-6">{{ __('Dapatkan notifikasi setiap ada artikel baru. Gratis dan tanpa spam!') }}</p>
                 <div class="flex flex-col sm:flex-row gap-3 max-w-md mx-auto">
-                    <input type="email" placeholder="Masukkan email Anda" class="flex-1 px-4 py-3 rounded-xl border-0 focus:ring-2 focus:ring-white/50 bg-white/20 text-white placeholder-white/60 backdrop-blur-sm">
+                    <input type="email" placeholder="{{ __('Masukkan email Anda') }}" class="flex-1 px-4 py-3 rounded-xl border-0 focus:ring-2 focus:ring-white/50 bg-white/20 text-white placeholder-white/60 backdrop-blur-sm">
                     <button class="px-6 py-3 bg-white text-primary-700 font-semibold rounded-xl hover:bg-gray-100 transition-colors shadow-lg">
-                        Berlangganan
+                        {{ __('Berlangganan') }}
                     </button>
                 </div>
             </div>

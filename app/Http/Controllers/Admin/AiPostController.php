@@ -78,6 +78,6 @@ class AiPostController extends Controller
         }
 
         return redirect()->route('admin.posts.index')
-            ->with('success', 'Artikel AI berhasil disimpan!');
+            ->with('success', __('Artikel AI berhasil disimpan!'));
     }
 }

@@ -7,16 +7,16 @@
     <div class="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
             <h1 class="text-3xl font-bold text-gray-900 dark:text-white">Blog</h1>
-            <p class="mt-2 text-gray-500 dark:text-gray-400">Jelajahi semua artikel kami</p>
+            <p class="mt-2 text-gray-500 dark:text-gray-400">{{ __('Jelajahi semua artikel kami') }}</p>
 
             {{-- Search & Filter --}}
             <form action="{{ route('posts.index') }}" method="GET" class="mt-6 flex flex-col sm:flex-row gap-3">
                 <div class="relative flex-1">
                     <svg class="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
-                    <input type="text" name="search" value="{{ request('search') }}" placeholder="Cari artikel..." class="w-full pl-10 pr-4 py-2.5 input-field">
+                    <input type="text" name="search" value="{{ request('search') }}" placeholder="{{ __('Cari artikel...') }}" class="w-full pl-10 pr-4 py-2.5 input-field">
                 </div>
                 <select name="category" class="input-field py-2.5">
-                    <option value="">Semua Kategori</option>
+                    <option value="">{{ __('Semua Kategori') }}</option>
                     @foreach($categories as $category)
                         <option value="{{ $category->slug }}" {{ request('category') == $category->slug ? 'selected' : '' }}>
                             {{ $category->name }} ({{ $category->published_posts_count }})
@@ -25,10 +25,10 @@
                 </select>
                 <button type="submit" class="btn-primary">
                     <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
-                    Cari
+                    {{ __('Cari') }}
                 </button>
                 @if(request()->hasAny(['search', 'category', 'tag']))
-                    <a href="{{ route('posts.index') }}" class="btn-secondary">Reset</a>
+                    <a href="{{ route('posts.index') }}" class="btn-secondary">{{ __('Reset') }}</a>
                 @endif
             </form>
         </div>
@@ -84,8 +84,8 @@
                 @else
                     <div class="text-center py-16">
                         <svg class="w-20 h-20 mx-auto text-gray-300 dark:text-gray-600 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-                        <h3 class="text-xl font-semibold text-gray-500 dark:text-gray-400">Tidak ada artikel ditemukan</h3>
-                        <p class="text-gray-400 dark:text-gray-500 mt-2">Coba ubah kata kunci pencarian Anda</p>
+                        <h3 class="text-xl font-semibold text-gray-500 dark:text-gray-400">{{ __('Tidak ada artikel ditemukan') }}</h3>
+                        <p class="text-gray-400 dark:text-gray-500 mt-2">{{ __('Coba ubah kata kunci pencarian Anda') }}</p>
                     </div>
                 @endif
             </div>
@@ -95,7 +95,7 @@
                 {{-- Tags --}}
                 @if($tags->count() > 0)
                     <div class="bg-white dark:bg-gray-800 rounded-2xl p-6 border border-gray-100 dark:border-gray-700">
-                        <h3 class="font-bold text-gray-900 dark:text-white mb-4">Tag Populer</h3>
+                        <h3 class="font-bold text-gray-900 dark:text-white mb-4">{{ __('Tag Populer') }}</h3>
                         <div class="flex flex-wrap gap-2">
                             @foreach($tags as $tag)
                                 <a href="{{ route('posts.tag', $tag->slug) }}" class="px-3 py-1.5 text-sm bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 rounded-lg hover:bg-primary-100 dark:hover:bg-primary-900/30 hover:text-primary-700 dark:hover:text-primary-300 transition-colors">

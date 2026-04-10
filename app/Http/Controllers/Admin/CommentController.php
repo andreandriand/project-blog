@@ -29,20 +29,20 @@ class CommentController extends Controller
     {
         $comment->update(['is_approved' => true]);
 
-        return back()->with('success', 'Komentar berhasil disetujui!');
+        return back()->with('success', __('Komentar berhasil disetujui!'));
     }
 
     public function reject(Comment $comment)
     {
         $comment->update(['is_approved' => false]);
 
-        return back()->with('success', 'Komentar berhasil ditolak!');
+        return back()->with('success', __('Komentar berhasil ditolak!'));
     }
 
     public function destroy(Comment $comment)
     {
         $comment->delete();
 
-        return back()->with('success', 'Komentar berhasil dihapus!');
+        return back()->with('success', __('Komentar berhasil dihapus!'));
     }
 }

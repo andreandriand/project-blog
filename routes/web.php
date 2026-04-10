@@ -28,6 +28,15 @@ Route::post('/blog/{post}/comments', [CommentController::class, 'store'])->name(
 Route::view('/about', 'pages.about')->name('about');
 Route::view('/contact', 'pages.contact')->name('contact');
 
+// Language Switch
+Route::get('/locale/{locale}', function (string $locale) {
+    if (in_array($locale, ['id', 'en'])) {
+        session()->put('locale', $locale);
+    }
+
+    return redirect()->back();
+})->name('locale.switch');
+
 // ==========================================
 // AUTH ROUTES (Breeze)
 // ==========================================

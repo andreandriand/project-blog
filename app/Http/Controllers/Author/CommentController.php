@@ -37,7 +37,7 @@ class CommentController extends Controller
 
         $comment->update(['is_approved' => true]);
 
-        return back()->with('success', 'Komentar berhasil disetujui!');
+        return back()->with('success', __('Komentar berhasil disetujui!'));
     }
 
     public function destroy(Comment $comment)
@@ -48,6 +48,6 @@ class CommentController extends Controller
 
         $comment->delete();
 
-        return back()->with('success', 'Komentar berhasil dihapus!');
+        return back()->with('success', __('Komentar berhasil dihapus!'));
     }
 }
