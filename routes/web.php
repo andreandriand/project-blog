@@ -62,6 +62,11 @@ Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(fun
     Route::patch('posts/{post}/approve', [Admin\PostController::class, 'approve'])->name('posts.approve');
     Route::patch('posts/{post}/reject', [Admin\PostController::class, 'reject'])->name('posts.reject');
 
+    // AI Post Generator
+    Route::get('ai-posts/create', [Admin\AiPostController::class, 'create'])->name('ai-posts.create');
+    Route::post('ai-posts/generate', [Admin\AiPostController::class, 'generate'])->name('ai-posts.generate');
+    Route::post('ai-posts', [Admin\AiPostController::class, 'store'])->name('ai-posts.store');
+
     // Categories
     Route::resource('categories', Admin\CategoryController::class)->except(['show']);
 
