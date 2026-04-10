@@ -2,6 +2,14 @@
 
 @section('title', __('Kontak') . ' - ' . config('app.name'))
 
+@section('seo')
+    <x-seo
+        :title="__('Hubungi Kami') . ' - ' . config('app.name')"
+        :description="__('Punya pertanyaan atau saran? Kami senang mendengar dari Anda')"
+        type="website"
+    />
+@endsection
+
 @section('content')
     <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
         <div class="text-center mb-12">

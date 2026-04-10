@@ -2,6 +2,14 @@
 
 @section('title', 'Blog - ' . config('app.name'))
 
+@section('seo')
+    <x-seo
+        :title="'Blog - ' . config('app.name')"
+        :description="__('Jelajahi semua artikel kami')"
+        type="website"
+    />
+@endsection
+
 @section('content')
     {{-- Page Header --}}
     <div class="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">

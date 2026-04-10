@@ -6,7 +6,12 @@
     <meta name="csrf-token" content="{{ csrf_token() }}">
 
     <title>@yield('title', config('app.name', 'ModernBlog'))</title>
-    <meta name="description" content="@yield('meta_description', 'A modern blog built with Laravel')">
+
+    @hasSection('seo')
+        @yield('seo')
+    @else
+        <x-seo />
+    @endif
 
     <!-- Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">

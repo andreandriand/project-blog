@@ -2,6 +2,14 @@
 
 @section('title', __('Tentang Kami') . ' - ' . config('app.name'))
 
+@section('seo')
+    <x-seo
+        :title="__('Tentang Kami') . ' - ' . config('app.name')"
+        :description="config('app.name') . ' ' . __('misi_paragraf_1')"
+        type="website"
+    />
+@endsection
+
 @section('content')
     <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
         <div class="text-center mb-12">

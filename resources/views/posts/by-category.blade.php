@@ -1,6 +1,14 @@
 @extends('layouts.blog')
 
-@section('title', 'Kategori: ' . $category->name . ' - ' . config('app.name'))
+@section('title', __('Kategori') . ': ' . $category->name . ' - ' . config('app.name'))
+
+@section('seo')
+    <x-seo
+        :title="__('Kategori') . ': ' . $category->name . ' - ' . config('app.name')"
+        :description="$category->description ?? __('Jelajahi semua artikel kami') . ' - ' . $category->name"
+        type="website"
+    />
+@endsection
 
 @section('content')
     <div class="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">

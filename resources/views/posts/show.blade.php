@@ -1,7 +1,22 @@
 @extends('layouts.blog')
 
 @section('title', $post->title . ' - ' . config('app.name'))
-@section('meta_description', $post->excerpt ?? Str::limit(strip_tags($post->body), 160))
+
+@section('seo')
+    <x-seo
+        :title="$post->title . ' - ' . config('app.name')"
+        :description="$post->excerpt ?? Str::limit(strip_tags($post->body), 160)"
+        :image="$post->featured_image ? asset('storage/' . $post->featured_image) : null"
+        type="article"
+        :article="[
+            'published_at' => $post->published_at?->toIso8601String(),
+            'updated_at' => $post->updated_at?->toIso8601String(),
+            'author' => $post->user->name,
+            'category' => $post->category?->name,
+            'tags' => $post->tags->pluck('name')->toArray(),
+        ]"
+    />
+@endsection
 
 @section('content')
     <article class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">

@@ -6,6 +6,7 @@ use App\Http\Controllers\CommentController;
 use App\Http\Controllers\HomeController;
 use App\Http\Controllers\PostController;
 use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\SitemapController;
 use Illuminate\Support\Facades\Route;
 
 // ==========================================
@@ -27,6 +28,14 @@ Route::post('/blog/{post}/comments', [CommentController::class, 'store'])->name(
 // Static Pages
 Route::view('/about', 'pages.about')->name('about');
 Route::view('/contact', 'pages.contact')->name('contact');
+
+// SEO
+Route::get('/sitemap.xml', [SitemapController::class, 'index'])->name('sitemap');
+Route::get('/robots.txt', function () {
+    $content = "User-agent: *\nAllow: /\n\nSitemap: " . url('/sitemap.xml') . "\n\nDisallow: /admin\nDisallow: /author\nDisallow: /profile\n";
+
+    return response($content, 200)->header('Content-Type', 'text/plain');
+});
 
 // Language Switch
 Route::get('/locale/{locale}', function (string $locale) {
@@ -92,4 +101,4 @@ Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(fun
     Route::resource('users', Admin\UserController::class)->except(['show']);
 });
 
-require __DIR__.'/auth.php';
+require __DIR__ . '/auth.php';

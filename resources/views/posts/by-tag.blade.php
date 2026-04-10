@@ -1,6 +1,14 @@
 @extends('layouts.blog')
 
-@section('title', 'Tag: ' . $tag->name . ' - ' . config('app.name'))
+@section('title', __('Tag') . ': ' . $tag->name . ' - ' . config('app.name'))
+
+@section('seo')
+    <x-seo
+        :title="__('Tag') . ': ' . $tag->name . ' - ' . config('app.name')"
+        :description="__('Jelajahi semua artikel kami') . ' - #' . $tag->name"
+        type="website"
+    />
+@endsection
 
 @section('content')
     <div class="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">

@@ -2,6 +2,14 @@
 
 @section('title', config('app.name') . ' - Blog Modern')
 
+@section('seo')
+    <x-seo
+        :title="config('app.name') . ' - Blog Modern'"
+        :description="__('Jelajahi artikel-artikel menarik tentang teknologi, desain, dan pengembangan diri. Ditulis oleh para ahli untuk menginspirasi perjalanan Anda.')"
+        type="website"
+    />
+@endsection
+
 @section('content')
     {{-- Hero Section --}}
     <section class="relative overflow-hidden bg-gradient-to-br from-primary-600 via-purple-600 to-pink-500">
