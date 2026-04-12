@@ -7,11 +7,13 @@ use App\Models\Category;
 use App\Models\Post;
 use App\Models\Tag;
 use App\Services\GeminiService;
+use App\Traits\GeneratesUniqueSlug;
 use Illuminate\Http\Request;
-use Illuminate\Support\Str;
 
 class AiPostController extends Controller
 {
+    use GeneratesUniqueSlug;
+
     public function create()
     {
         return view('admin.posts.ai-generate');
@@ -58,12 +60,7 @@ class AiPostController extends Controller
         ]);
 
         $validated['user_id'] = auth()->id();
-        $validated['slug'] = Str::slug($validated['title']);
-
-        $count = Post::where('slug', $validated['slug'])->count();
-        if ($count > 0) {
-            $validated['slug'] .= '-'.($count + 1);
-        }
+        $validated['slug'] = $this->generateUniqueSlug($validated['title'], Post::class);
 
         if ($validated['status'] === 'published') {
             $validated['published_at'] = now();

@@ -18,11 +18,11 @@ class PostController extends Controller
         }
 
         if ($request->filled('category')) {
-            $query->whereHas('category', fn($q) => $q->where('slug', $request->category));
+            $query->whereHas('category', fn ($q) => $q->where('slug', $request->category));
         }
 
         if ($request->filled('tag')) {
-            $query->whereHas('tags', fn($q) => $q->where('slug', $request->tag));
+            $query->whereHas('tags', fn ($q) => $q->where('slug', $request->tag));
         }
 
         $posts = $query->paginate(9)->withQueryString();
@@ -38,7 +38,12 @@ class PostController extends Controller
             abort(404);
         }
 
-        $post->increment('views_count');
+        $sessionKey = 'viewed_post_'.$post->id;
+        if (! session()->has($sessionKey)) {
+            $post->increment('views_count');
+            session()->put($sessionKey, true);
+        }
+
         $post->load(['user', 'category', 'tags', 'approvedComments.replies', 'approvedComments.user']);
 
         $relatedPosts = Post::published()

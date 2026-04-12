@@ -23,7 +23,9 @@ Route::get('/category/{category:slug}', [PostController::class, 'byCategory'])->
 Route::get('/tag/{tag:slug}', [PostController::class, 'byTag'])->name('posts.tag');
 
 // Comments
-Route::post('/blog/{post}/comments', [CommentController::class, 'store'])->name('comments.store');
+Route::post('/blog/{post}/comments', [CommentController::class, 'store'])
+    ->middleware('throttle:6,1')
+    ->name('comments.store');
 
 // Static Pages
 Route::view('/about', 'pages.about')->name('about');

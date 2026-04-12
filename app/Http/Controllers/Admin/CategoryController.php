@@ -12,6 +12,7 @@ class CategoryController extends Controller
     public function index()
     {
         $categories = Category::withCount('posts')->latest()->paginate(10);
+
         return view('admin.categories.index', compact('categories'));
     }
 
@@ -32,7 +33,7 @@ class CategoryController extends Controller
         Category::create($validated);
 
         return redirect()->route('admin.categories.index')
-            ->with('success', 'Kategori berhasil dibuat!');
+            ->with('success', __('Kategori berhasil dibuat!'));
     }
 
     public function edit(Category $category)
@@ -43,7 +44,7 @@ class CategoryController extends Controller
     public function update(Request $request, Category $category)
     {
         $validated = $request->validate([
-            'name' => 'required|max:255|unique:categories,name,' . $category->id,
+            'name' => 'required|max:255|unique:categories,name,'.$category->id,
             'description' => 'nullable|max:500',
         ]);
 
@@ -52,7 +53,7 @@ class CategoryController extends Controller
         $category->update($validated);
 
         return redirect()->route('admin.categories.index')
-            ->with('success', 'Kategori berhasil diperbarui!');
+            ->with('success', __('Kategori berhasil diperbarui!'));
     }
 
     public function destroy(Category $category)
@@ -60,6 +61,6 @@ class CategoryController extends Controller
         $category->delete();
 
         return redirect()->route('admin.categories.index')
-            ->with('success', 'Kategori berhasil dihapus!');
+            ->with('success', __('Kategori berhasil dihapus!'));
     }
 }

@@ -23,10 +23,10 @@ class HomeController extends Controller
             ->get();
 
         $categories = Category::withCount('publishedPosts')
-            ->get()
-            ->filter(fn($cat) => $cat->published_posts_count > 0)
-            ->sortByDesc('published_posts_count')
-            ->take(8);
+            ->having('published_posts_count', '>', 0)
+            ->orderByDesc('published_posts_count')
+            ->take(8)
+            ->get();
 
         return view('home', compact('featuredPosts', 'latestPosts', 'categories'));
     }

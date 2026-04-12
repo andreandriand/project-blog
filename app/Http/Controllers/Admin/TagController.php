@@ -12,6 +12,7 @@ class TagController extends Controller
     public function index()
     {
         $tags = Tag::withCount('posts')->latest()->paginate(10);
+
         return view('admin.tags.index', compact('tags'));
     }
 
@@ -31,7 +32,7 @@ class TagController extends Controller
         Tag::create($validated);
 
         return redirect()->route('admin.tags.index')
-            ->with('success', 'Tag berhasil dibuat!');
+            ->with('success', __('Tag berhasil dibuat!'));
     }
 
     public function edit(Tag $tag)
@@ -42,7 +43,7 @@ class TagController extends Controller
     public function update(Request $request, Tag $tag)
     {
         $validated = $request->validate([
-            'name' => 'required|max:255|unique:tags,name,' . $tag->id,
+            'name' => 'required|max:255|unique:tags,name,'.$tag->id,
         ]);
 
         $validated['slug'] = Str::slug($validated['name']);
@@ -50,7 +51,7 @@ class TagController extends Controller
         $tag->update($validated);
 
         return redirect()->route('admin.tags.index')
-            ->with('success', 'Tag berhasil diperbarui!');
+            ->with('success', __('Tag berhasil diperbarui!'));
     }
 
     public function destroy(Tag $tag)
@@ -58,6 +59,6 @@ class TagController extends Controller
         $tag->delete();
 
         return redirect()->route('admin.tags.index')
-            ->with('success', 'Tag berhasil dihapus!');
+            ->with('success', __('Tag berhasil dihapus!'));
     }
 }

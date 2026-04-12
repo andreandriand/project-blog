@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Author;
 use App\Http\Controllers\Controller;
 use App\Models\Comment;
 use App\Models\Post;
+use Illuminate\Support\Facades\DB;
 
 class DashboardController extends Controller
 {
@@ -12,15 +13,21 @@ class DashboardController extends Controller
     {
         $userId = auth()->id();
 
-        $stats = [
-            'total_posts' => Post::where('user_id', $userId)->count(),
-            'published_posts' => Post::where('user_id', $userId)->where('status', 'published')->count(),
-            'pending_posts' => Post::where('user_id', $userId)->where('status', 'pending')->count(),
-            'draft_posts' => Post::where('user_id', $userId)->where('status', 'draft')->count(),
-            'rejected_posts' => Post::where('user_id', $userId)->where('status', 'rejected')->count(),
-            'total_views' => Post::where('user_id', $userId)->sum('views_count'),
-            'total_comments' => Comment::whereHas('post', fn ($q) => $q->where('user_id', $userId))->count(),
-        ];
+        $postStats = Post::where('user_id', $userId)
+            ->select([
+                DB::raw('COUNT(*) as total_posts'),
+                DB::raw("COUNT(CASE WHEN status = 'published' THEN 1 END) as published_posts"),
+                DB::raw("COUNT(CASE WHEN status = 'pending' THEN 1 END) as pending_posts"),
+                DB::raw("COUNT(CASE WHEN status = 'draft' THEN 1 END) as draft_posts"),
+                DB::raw("COUNT(CASE WHEN status = 'rejected' THEN 1 END) as rejected_posts"),
+                DB::raw('COALESCE(SUM(views_count), 0) as total_views'),
+            ])
+            ->first();
+
+        $stats = array_merge(
+            (array) $postStats->getAttributes(),
+            ['total_comments' => Comment::whereHas('post', fn ($q) => $q->where('user_id', $userId))->count()]
+        );
 
         $recentPosts = Post::where('user_id', $userId)
             ->with('category')

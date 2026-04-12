@@ -6,12 +6,14 @@ use App\Http\Controllers\Controller;
 use App\Models\Category;
 use App\Models\Post;
 use App\Models\Tag;
+use App\Traits\GeneratesUniqueSlug;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
-use Illuminate\Support\Str;
 
 class PostController extends Controller
 {
+    use GeneratesUniqueSlug;
+
     public function index(Request $request)
     {
         $query = Post::with(['user', 'category', 'tags'])->latest();
@@ -52,13 +54,7 @@ class PostController extends Controller
         ]);
 
         $validated['user_id'] = auth()->id();
-        $validated['slug'] = Str::slug($validated['title']);
-
-        // Ensure unique slug
-        $count = Post::where('slug', $validated['slug'])->count();
-        if ($count > 0) {
-            $validated['slug'] .= '-'.($count + 1);
-        }
+        $validated['slug'] = $this->generateUniqueSlug($validated['title'], Post::class);
 
         if ($request->filled('featured_image_path')) {
             $validated['featured_image'] = $request->featured_image_path;

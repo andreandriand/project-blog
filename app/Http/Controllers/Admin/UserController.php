@@ -14,6 +14,7 @@ class UserController extends Controller
     public function index()
     {
         $users = User::withCount('posts')->latest()->paginate(10);
+
         return view('admin.users.index', compact('users'));
     }
 
@@ -42,7 +43,7 @@ class UserController extends Controller
         User::create($validated);
 
         return redirect()->route('admin.users.index')
-            ->with('success', 'User berhasil dibuat!');
+            ->with('success', __('User berhasil dibuat!'));
     }
 
     public function edit(User $user)
@@ -54,7 +55,7 @@ class UserController extends Controller
     {
         $validated = $request->validate([
             'name' => 'required|max:255',
-            'email' => 'required|email|unique:users,email,' . $user->id,
+            'email' => 'required|email|unique:users,email,'.$user->id,
             'password' => ['nullable', 'confirmed', Rules\Password::defaults()],
             'role' => 'required|in:admin,author,reader',
             'bio' => 'nullable|max:500',
@@ -68,7 +69,7 @@ class UserController extends Controller
             $validated['avatar'] = $request->file('avatar')->store('avatars', 'public');
         }
 
-        if (!empty($validated['password'])) {
+        if (! empty($validated['password'])) {
             $validated['password'] = Hash::make($validated['password']);
         } else {
             unset($validated['password']);
@@ -77,13 +78,13 @@ class UserController extends Controller
         $user->update($validated);
 
         return redirect()->route('admin.users.index')
-            ->with('success', 'User berhasil diperbarui!');
+            ->with('success', __('User berhasil diperbarui!'));
     }
 
     public function destroy(User $user)
     {
         if ($user->id === auth()->id()) {
-            return back()->with('error', 'Tidak bisa menghapus akun sendiri!');
+            return back()->with('error', __('Tidak bisa menghapus akun sendiri!'));
         }
 
         if ($user->avatar) {
@@ -93,6 +94,6 @@ class UserController extends Controller
         $user->delete();
 
         return redirect()->route('admin.users.index')
-            ->with('success', 'User berhasil dihapus!');
+            ->with('success', __('User berhasil dihapus!'));
     }
 }
