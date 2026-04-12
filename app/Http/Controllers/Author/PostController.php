@@ -59,7 +59,9 @@ class PostController extends Controller
             $validated['slug'] .= '-'.($count + 1);
         }
 
-        if ($request->hasFile('featured_image')) {
+        if ($request->filled('featured_image_path')) {
+            $validated['featured_image'] = $request->featured_image_path;
+        } elseif ($request->hasFile('featured_image')) {
             $validated['featured_image'] = $request->file('featured_image')->store('posts', 'public');
         }
 
@@ -103,7 +105,9 @@ class PostController extends Controller
             'tags.*' => 'exists:tags,id',
         ]);
 
-        if ($request->hasFile('featured_image')) {
+        if ($request->filled('featured_image_path')) {
+            $validated['featured_image'] = $request->featured_image_path;
+        } elseif ($request->hasFile('featured_image')) {
             if ($post->featured_image) {
                 Storage::disk('public')->delete($post->featured_image);
             }

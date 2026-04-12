@@ -32,7 +32,7 @@ Route::view('/contact', 'pages.contact')->name('contact');
 // SEO
 Route::get('/sitemap.xml', [SitemapController::class, 'index'])->name('sitemap');
 Route::get('/robots.txt', function () {
-    $content = "User-agent: *\nAllow: /\n\nSitemap: " . url('/sitemap.xml') . "\n\nDisallow: /admin\nDisallow: /author\nDisallow: /profile\n";
+    $content = "User-agent: *\nAllow: /\n\nSitemap: ".url('/sitemap.xml')."\n\nDisallow: /admin\nDisallow: /author\nDisallow: /profile\n";
 
     return response($content, 200)->header('Content-Type', 'text/plain');
 });
@@ -64,6 +64,11 @@ Route::middleware(['auth', 'author'])->prefix('author')->name('author.')->group(
     Route::resource('posts', Author\PostController::class);
     Route::patch('posts/{post}/submit', [Author\PostController::class, 'submitForReview'])->name('posts.submit');
 
+    Route::get('media', [Author\MediaController::class, 'index'])->name('media.index');
+    Route::post('media', [Author\MediaController::class, 'store'])->name('media.store');
+    Route::delete('media/{medium}', [Author\MediaController::class, 'destroy'])->name('media.destroy');
+    Route::get('media/json', [Author\MediaController::class, 'json'])->name('media.json');
+
     Route::get('comments', [Author\CommentController::class, 'index'])->name('comments.index');
     Route::patch('comments/{comment}/approve', [Author\CommentController::class, 'approve'])->name('comments.approve');
     Route::delete('comments/{comment}', [Author\CommentController::class, 'destroy'])->name('comments.destroy');
@@ -85,6 +90,12 @@ Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(fun
     Route::post('ai-posts/generate', [Admin\AiPostController::class, 'generate'])->name('ai-posts.generate');
     Route::post('ai-posts', [Admin\AiPostController::class, 'store'])->name('ai-posts.store');
 
+    // Media
+    Route::get('media', [Admin\MediaController::class, 'index'])->name('media.index');
+    Route::post('media', [Admin\MediaController::class, 'store'])->name('media.store');
+    Route::delete('media/{medium}', [Admin\MediaController::class, 'destroy'])->name('media.destroy');
+    Route::get('media/json', [Admin\MediaController::class, 'json'])->name('media.json');
+
     // Categories
     Route::resource('categories', Admin\CategoryController::class)->except(['show']);
 
@@ -101,4 +112,4 @@ Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(fun
     Route::resource('users', Admin\UserController::class)->except(['show']);
 });
 
-require __DIR__ . '/auth.php';
+require __DIR__.'/auth.php';

@@ -75,11 +75,12 @@
                 </div>
 
                 <div class="bg-white dark:bg-gray-800 rounded-2xl p-6 border border-gray-100 dark:border-gray-700">
-                    <h3 class="font-semibold text-gray-900 dark:text-white mb-4">Gambar Utama</h3>
-                    @if($post->featured_image)
-                        <img src="{{ $post->featured_image_url }}" alt="" class="w-full h-32 object-cover rounded-lg mb-3">
-                    @endif
-                    <input type="file" name="featured_image" accept="image/*" class="w-full text-sm text-gray-500 dark:text-gray-400 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-primary-50 file:text-primary-700 dark:file:bg-primary-900/30 dark:file:text-primary-300 hover:file:bg-primary-100">
+                    <h3 class="font-semibold text-gray-900 dark:text-white mb-4">{{ __('Gambar Utama') }}</h3>
+                    <x-media-picker name="featured_image_path" :apiUrl="route('admin.media.json')" :currentImage="$post->featured_image ? asset('storage/' . $post->featured_image) : null" />
+                    <div class="mt-3 pt-3 border-t border-gray-100 dark:border-gray-700">
+                        <p class="text-xs text-gray-400 mb-2">{{ __('Atau upload langsung:') }}</p>
+                        <input type="file" name="featured_image" accept="image/*" class="w-full text-sm text-gray-500 dark:text-gray-400 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-primary-50 file:text-primary-700 dark:file:bg-primary-900/30 dark:file:text-primary-300 hover:file:bg-primary-100">
+                    </div>
                     @error('featured_image') <p class="text-red-500 text-xs mt-1">{{ $message }}</p> @enderror
                 </div>
             </div>
