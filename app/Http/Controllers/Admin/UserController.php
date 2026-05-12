@@ -5,10 +5,20 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\User;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rules;
 
+/**
+ * Tujuan: CRUD user dari panel admin (admin-only).
+ * Caller: routes/web.php grup admin -> admin.users.* -> Admin\UserController.
+ * Dependensi: App\Models\User (cast 'password' => 'hashed'), Storage (disk public), Rules\Password.
+ * Main Functions: index, create, store, edit, update, destroy.
+ * Side Effects: DB write ke tabel users, upload avatar ke disk 'public', delete file avatar saat update/destroy.
+ *
+ * Catatan penting: Jangan memanggil Hash::make() pada field 'password' karena model User
+ * sudah memiliki cast 'password' => 'hashed' yang otomatis mem-hash saat assignment.
+ * Memanggil Hash::make() manual akan menghasilkan double-hashing dan user tidak bisa login.
+ */
 class UserController extends Controller
 {
     public function index()
@@ -38,7 +48,8 @@ class UserController extends Controller
             $validated['avatar'] = $request->file('avatar')->store('avatars', 'public');
         }
 
-        $validated['password'] = Hash::make($validated['password']);
+        // NOTE: Model User punya cast 'password' => 'hashed'.
+        // Jangan Hash::make() manual di sini — akan double-hash dan user tidak bisa login.
 
         User::create($validated);
 
@@ -70,7 +81,8 @@ class UserController extends Controller
         }
 
         if (! empty($validated['password'])) {
-            $validated['password'] = Hash::make($validated['password']);
+            // NOTE: cast 'password' => 'hashed' di model User akan meng-hash otomatis.
+            // Biarkan plaintext di sini — jangan Hash::make() manual (akan double-hash).
         } else {
             unset($validated['password']);
         }

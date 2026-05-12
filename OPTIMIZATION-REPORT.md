@@ -2,6 +2,7 @@
 
 **Tanggal awal:** 2026-04-13
 **Direvisi:** 2026-05-12 (verifikasi ulang terhadap kode aktual)
+**Eksekusi CRITICAL:** 2026-05-12 (5/5 CRITICAL selesai + build verified)
 **Project:** ModernBlog / AndBlog (Laravel 13 + Vite + Tailwind + Alpine.js + PostgreSQL)
 
 ---
@@ -11,120 +12,81 @@
 - ✅ **VALID** — Masalah masih ada, rekomendasi masih tepat
 - ⚠️ **PARTIAL** — Masalah masih ada tetapi ada nuansa / rekomendasi perlu disesuaikan
 - ❌ **OBSOLETE** — Sudah diperbaiki atau tidak lagi relevan dengan kondisi kode saat ini
+- 🟢 **FIXED** — Sudah dieksekusi pada revisi ini (2026-05-12)
 
 ---
 
 ## CRITICAL — Harus Segera Diperbaiki
 
-### 1. Bug: Password Double-Hashing — ✅ VALID
+### 1. Bug: Password Double-Hashing — 🟢 FIXED (2026-05-12)
 
-**File:** `app/Http/Controllers/Admin/UserController.php` (line 41, 73)
+**File:** `app/Http/Controllers/Admin/UserController.php`
 
-```php
-$validated['password'] = Hash::make($validated['password']);
-```
+Model `User` punya cast `'password' => 'hashed'` yang otomatis hash. Password sebelumnya di-hash 2 kali → user admin-panel tidak bisa login.
 
-Model `User` punya cast `'password' => 'hashed'` yang otomatis hash. Password di-hash **2 kali** → user yang dibuat via admin panel **tidak bisa login**.
+**Eksekusi:** `Hash::make()` dihapus dari method `store` (line 41 lama) dan `update` (line 73 lama). Import `Hash` facade dihapus. Header doc ditambah menjelaskan cast behavior untuk mencegah regression.
 
-**Status 2026-05-12:** Bug masih ada di line 41 (method `store`) dan line 73 (method `update`).
-
-**Solusi:** Hapus `Hash::make()` di controller, biarkan cast yang handle.
-
-```php
-// Sebelum (BUG)
-$validated['password'] = Hash::make($validated['password']);
-
-// Sesudah (FIX)
-// Tidak perlu hash manual, cast 'hashed' di model sudah otomatis
-```
+**Verifikasi:** `php -l` clean.
 
 ---
 
-### 2. XSS Vulnerability: Unescaped HTML — ✅ VALID
+### 2. XSS Vulnerability: Unescaped HTML — 🟢 FIXED (2026-05-12)
 
-**File:** `resources/views/posts/show.blade.php` (line 92)
+**File:** `resources/views/posts/show.blade.php` (tetap `{!! $post->body !!}`, tapi sekarang body disanitasi di sumber).
 
-```php
-{!! $post->body !!}
-```
+Body post (termasuk output AI Gemini) dulu di-render tanpa sanitasi — Stored XSS risk.
 
-Body post (termasuk output dari AI Gemini) di-render tanpa sanitasi. Author bisa inject `<script>` → **Stored XSS**.
+**Eksekusi:**
+1. Install `mews/purifier ^3.4.4` (wrapper HTMLPurifier).
+2. Publish config ke `config/purifier.php` dan tambah preset `blog`:
+   - Allowed tags: `h2,h3,h4,p,br,strong,em,b,i,u,s,a,ul,ol,li,blockquote,code,pre,hr,img,figure,figcaption`
+   - Link: `target=_blank`, `rel=nofollow`
+   - Scheme URL: `http`, `https`, `mailto` saja
+   - CSS properties: kosong (tidak izinkan inline style)
+3. `Purifier::clean($body, 'blog')` dipasang di:
+   - `Admin\PostController::store`
+   - `Admin\PostController::update`
+   - `Author\PostController::store`
+   - `Author\PostController::update`
+   - `Admin\AiPostController::store`
 
-**Status 2026-05-12:** Masih raw HTML tanpa sanitasi.
+**Verifikasi runtime:** payload `<script>alert(1)</script>`, `href="javascript:..."`, `onerror=alert(1)` semuanya di-strip saat test via tinker. Tag `<h2>`, `<p>` aman dipertahankan.
 
-**Solusi:** Install `mews/purifier` dan sanitasi HTML sebelum disimpan.
-
-```bash
-composer require mews/purifier
-```
-
-```php
-// Di controller store/update post:
-$validated['body'] = clean($validated['body']);
-```
-
----
-
-### 3. SVG Upload = Stored XSS — ✅ VALID
-
-**File:** `app/Http/Controllers/Admin/MediaController.php` (line 34) & `app/Http/Controllers/Author/MediaController.php` (line 30)
-
-SVG diizinkan di upload (`mimes:...,svg`), padahal SVG bisa mengandung `<script>`.
-
-**Status 2026-05-12:** Kedua controller masih mengizinkan SVG.
-
-**Solusi:** Hapus `svg` dari allowed mimes.
-
-```php
-// Sebelum
-'files.*' => 'required|image|mimes:jpeg,png,jpg,gif,webp,svg|max:5120',
-
-// Sesudah
-'files.*' => 'required|image|mimes:jpeg,png,jpg,gif,webp|max:5120',
-```
+**Catatan:** Post lama yang sudah masuk DB sebelum patch ini **belum disanitasi**. Jika ada data legacy dari author/AI yang mencurigakan, jalankan backfill manual (mis. via tinker: `Post::each(fn($p) => $p->update(['body' => Purifier::clean($p->body, 'blog')]))`).
 
 ---
 
-### 4. `featured_image_path` Tidak Divalidasi — ✅ VALID
+### 3. SVG Upload = Stored XSS — 🟢 FIXED (2026-05-12)
 
-**File:** `app/Http/Controllers/Admin/PostController.php` (line 60) & `app/Http/Controllers/Author/PostController.php` (line 60)
+**File:** `app/Http/Controllers/Admin/MediaController.php` & `app/Http/Controllers/Author/MediaController.php`
 
-```php
-$validated['featured_image'] = $request->featured_image_path; // langsung dari request!
-```
+SVG dihapus dari `mimes` validasi di kedua controller. Whitelist sekarang: `jpeg,png,jpg,gif,webp`.
 
-Bisa dieksploitasi untuk path traversal / overwrite field dengan path sembarang.
-
-**Status 2026-05-12:** Masih ada di kedua controller (store + update).
-
-**Solusi:** Validasi bahwa path berada dalam direktori yang diizinkan.
-
-```php
-if ($request->filled('featured_image_path')) {
-    $path = $request->featured_image_path;
-    if (preg_match('#^(media|posts)/#', $path) && !str_contains($path, '..')) {
-        $validated['featured_image'] = $path;
-    }
-}
-```
-
-Alternatif lebih kuat: pastikan `$path` mengacu ke record `Media` yang benar-benar ada di DB milik user.
+**Verifikasi:** `grep svg app/` → no matches. `php -l` clean.
 
 ---
 
-### 5. Konflik Tailwind v3 vs v4 — ✅ VALID (perlu koreksi ringan)
+### 4. `featured_image_path` Tidak Divalidasi — 🟢 FIXED (2026-05-12)
+
+**File:** `app/Http/Controllers/Admin/PostController.php` & `app/Http/Controllers/Author/PostController.php`
+
+**Eksekusi:** tambah validasi DB lookup pada field `featured_image_path`.
+- **Admin**: `'featured_image_path' => 'nullable|string|exists:media,path'` (admin boleh pakai media siapa saja).
+- **Author**: `Rule::exists('media', 'path')->where(fn ($q) => $q->where('user_id', auth()->id()))` — author hanya boleh refer media miliknya sendiri.
+
+Rule ini otomatis blok path sembarang, path traversal (`..`), dan path ke file non-media.
+
+**Verifikasi:** `php -l` clean pada kedua controller. Form tidak perlu diubah — field tetap `featured_image_path` (hidden input di blade component `media-picker`).
+
+---
+
+### 5. Konflik Tailwind v3 vs v4 — 🟢 FIXED (2026-05-12)
 
 **File:** `package.json`
 
-`tailwindcss: ^3.1.0` + `@tailwindcss/vite: ^4.0.0`.
+**Eksekusi:** `npm uninstall @tailwindcss/vite` (removed 11 packages). `tailwindcss: ^3.1.0` dipertahankan.
 
-**Status 2026-05-12:** Masih terdaftar keduanya. **Nuansa:** `vite.config.js` **tidak** memakai plugin `@tailwindcss/vite`, dan `tailwind.config.js` masih gaya v3. Jadi `@tailwindcss/vite` adalah dead dependency — aman dihapus tanpa efek build.
-
-**Solusi:** Hapus `@tailwindcss/vite` dari devDependencies.
-
-```bash
-npm uninstall @tailwindcss/vite
-```
+**Verifikasi:** `npx vite build` sukses — 55 modules transformed, 964ms. Output `public/build/assets/app-*.css` (77 kB) dan `app-*.js` (82 kB).
 
 ---
 
@@ -604,11 +566,11 @@ jobs:
 
 | #  | Item                                              | Status 2026-05-12 |
 | -- | ------------------------------------------------- | ----------------- |
-| 1  | Password double-hashing                            | ✅ VALID           |
-| 2  | XSS HTML post body                                 | ✅ VALID           |
-| 3  | SVG upload                                         | ✅ VALID           |
-| 4  | `featured_image_path` tidak divalidasi             | ✅ VALID           |
-| 5  | Konflik Tailwind v3/v4                             | ✅ VALID           |
+| 1  | Password double-hashing                            | 🟢 FIXED          |
+| 2  | XSS HTML post body                                 | 🟢 FIXED          |
+| 3  | SVG upload                                         | 🟢 FIXED          |
+| 4  | `featured_image_path` tidak divalidasi             | 🟢 FIXED          |
+| 5  | Konflik Tailwind v3/v4                             | 🟢 FIXED          |
 | 6  | Duplikasi Admin vs Author controller               | ✅ VALID           |
 | 7  | Validasi post duplikasi 5x                         | ✅ VALID           |
 | 8  | N+1 comment replies                                | ✅ VALID           |
@@ -628,30 +590,54 @@ jobs:
 | 22 | Zero business logic tests                          | ✅ VALID           |
 | 23 | Tidak ada Docker/CI-CD                             | ✅ VALID           |
 
-**Ringkasan angka:** 16 VALID penuh, 6 PARTIAL, 1 OBSOLETE.
+**Ringkasan angka:** 5 FIXED ✅ (semua CRITICAL selesai), 11 VALID belum dieksekusi, 6 PARTIAL, 1 OBSOLETE.
 
 ---
 
 ## Ringkasan Action Items (Urut Prioritas Eksekusi)
 
-| #  | Action                                                   | Impact               | Effort    |
-| -- | -------------------------------------------------------- | -------------------- | --------- |
-| 1  | Fix double-hashing bug di `UserController`               | CRITICAL Bug         | 5 menit   |
-| 2  | Sanitasi HTML — install `mews/purifier`                  | CRITICAL Security    | 30 menit  |
-| 3  | Hapus SVG dari allowed upload types                      | CRITICAL Security    | 5 menit   |
-| 4  | Validasi `featured_image_path`                           | CRITICAL Security    | 15 menit  |
-| 5  | Hapus `@tailwindcss/vite` dari `package.json`            | CRITICAL Build       | 5 menit   |
-| 6  | Hapus / implementasikan newsletter form                  | LOW UX               | 5 menit   |
-| 7  | Fix N+1 queries — eager load `replies.user`              | MEDIUM Performance   | 5 menit   |
-| 8  | Konsolidasi query Admin Dashboard                        | MEDIUM Performance   | 15 menit  |
-| 9  | Tambah index yang masih missing                          | MEDIUM Performance   | 15 menit  |
-| 10 | Tambah security headers middleware                       | MEDIUM Security      | 20 menit  |
-| 11 | `Cache::remember` untuk homepage & sitemap               | MEDIUM Performance   | 45 menit  |
-| 12 | Ekstrak Form Requests & Services                         | HIGH Maintainability | 2-3 jam   |
-| 13 | Deduplikasi font loading (Inter 2x)                      | LOW Performance      | 10 menit  |
-| 14 | Ganti manual `.prose` dengan `@tailwindcss/typography`   | LOW Quality          | 30 menit  |
-| 15 | Update `.env.example` ke `DB_CONNECTION=pgsql` + README  | LOW Documentation    | 10 menit  |
-| 16 | Tulis feature tests untuk core business logic            | MEDIUM Quality       | 4-6 jam   |
-| 17 | Setup GitHub Actions CI dengan PG service                | MEDIUM Quality       | 30 menit  |
+| #  | Action                                                   | Impact               | Effort    | Status |
+| -- | -------------------------------------------------------- | -------------------- | --------- | ------ |
+| 1  | Fix double-hashing bug di `UserController`               | CRITICAL Bug         | 5 menit   | 🟢 Done |
+| 2  | Sanitasi HTML — install `mews/purifier`                  | CRITICAL Security    | 30 menit  | 🟢 Done |
+| 3  | Hapus SVG dari allowed upload types                      | CRITICAL Security    | 5 menit   | 🟢 Done |
+| 4  | Validasi `featured_image_path`                           | CRITICAL Security    | 15 menit  | 🟢 Done |
+| 5  | Hapus `@tailwindcss/vite` dari `package.json`            | CRITICAL Build       | 5 menit   | 🟢 Done |
+| 6  | Hapus / implementasikan newsletter form                  | LOW UX               | 5 menit   | ⏳      |
+| 7  | Fix N+1 queries — eager load `replies.user`              | MEDIUM Performance   | 5 menit   | ⏳      |
+| 8  | Konsolidasi query Admin Dashboard                        | MEDIUM Performance   | 15 menit  | ⏳      |
+| 9  | Tambah index yang masih missing                          | MEDIUM Performance   | 15 menit  | ⏳      |
+| 10 | Tambah security headers middleware                       | MEDIUM Security      | 20 menit  | ⏳      |
+| 11 | `Cache::remember` untuk homepage & sitemap               | MEDIUM Performance   | 45 menit  | ⏳      |
+| 12 | Ekstrak Form Requests & Services                         | HIGH Maintainability | 2-3 jam   | ⏳      |
+| 13 | Deduplikasi font loading (Inter 2x)                      | LOW Performance      | 10 menit  | ⏳      |
+| 14 | Ganti manual `.prose` dengan `@tailwindcss/typography`   | LOW Quality          | 30 menit  | ⏳      |
+| 15 | Update `.env.example` ke `DB_CONNECTION=pgsql` + README  | LOW Documentation    | 10 menit  | ⏳      |
+| 16 | Tulis feature tests untuk core business logic            | MEDIUM Quality       | 4-6 jam   | ⏳      |
+| 17 | Setup GitHub Actions CI dengan PG service                | MEDIUM Quality       | 30 menit  | ⏳      |
 
-**Quick-win ≤30 menit (tangkap ~80% value):** #1, #2, #3, #4, #5, #6, #7, #8, #10, #13, #15
+**Quick-win ≤30 menit (tangkap ~80% value):** #1, #2, #3, #4, #5, #6, #7, #8, #10, #13, #15 (5 sudah ✅, 6 tersisa)
+
+---
+
+## Eksekusi Log
+
+### 2026-05-12 — Semua CRITICAL selesai
+
+Files yang diubah:
+- `app/Http/Controllers/Admin/UserController.php` — remove `Hash::make()` + header doc
+- `app/Http/Controllers/Admin/MediaController.php` — remove svg mime + header doc
+- `app/Http/Controllers/Author/MediaController.php` — remove svg mime + header doc
+- `app/Http/Controllers/Admin/PostController.php` — add `Purifier::clean()` + `exists:media,path` + header doc
+- `app/Http/Controllers/Author/PostController.php` — add `Purifier::clean()` + `Rule::exists` with ownership + header doc
+- `app/Http/Controllers/Admin/AiPostController.php` — add `Purifier::clean()` + header doc
+- `config/purifier.php` — published + tambah preset `blog`
+- `package.json` / `package-lock.json` — `@tailwindcss/vite` removed
+- `composer.json` / `composer.lock` — `mews/purifier ^3.4` added
+
+Verifikasi:
+- `php -l` clean untuk semua file PHP yang diubah
+- `npx vite build` sukses (55 modules, 964ms)
+- Purifier runtime test: XSS payloads (script, javascript: URL, onerror) berhasil di-strip, tag legitimate dipertahankan
+
+Catatan deployment: pastikan jalankan `php artisan config:clear` di server setelah pull agar config purifier yang baru ter-load.

@@ -6,8 +6,18 @@ use App\Http\Controllers\Controller;
 use App\Models\Media;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
-use Illuminate\Support\Str;
+use Illuminate\Support\Facades\Str;
 
+/**
+ * Tujuan: Media library per-user untuk author (hanya lihat/upload/hapus milik sendiri).
+ * Caller: routes/web.php grup author -> author.media.* -> Author\MediaController.
+ * Dependensi: App\Models\Media, Storage (disk public), Str::uuid untuk filename.
+ * Main Functions: index, store, destroy, json.
+ * Side Effects: Upload file ke disk 'public/media', DB write tabel media, ownership check per user_id.
+ *
+ * Catatan keamanan: SVG sengaja tidak diizinkan karena dapat membawa payload <script>.
+ * Whitelist mime hanya raster image (jpeg, png, jpg, gif, webp).
+ */
 class MediaController extends Controller
 {
     public function index(Request $request)
@@ -27,7 +37,7 @@ class MediaController extends Controller
     {
         $request->validate([
             'files' => 'required|array|max:10',
-            'files.*' => 'required|image|mimes:jpeg,png,jpg,gif,webp,svg|max:5120',
+            'files.*' => 'required|image|mimes:jpeg,png,jpg,gif,webp|max:5120',
         ]);
 
         $uploaded = [];

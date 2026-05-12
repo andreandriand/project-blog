@@ -9,7 +9,18 @@ use App\Models\Tag;
 use App\Services\GeminiService;
 use App\Traits\GeneratesUniqueSlug;
 use Illuminate\Http\Request;
+use Mews\Purifier\Facades\Purifier;
 
+/**
+ * Tujuan: Admin-only AI post generator via Google Gemini, lalu simpan sebagai Post.
+ * Caller: routes/web.php grup admin -> admin.ai-posts.* -> Admin\AiPostController.
+ * Dependensi: App\Services\GeminiService, GeneratesUniqueSlug trait, Models Post/Category/Tag, Mews\Purifier.
+ * Main Functions: create, generate, store.
+ * Side Effects: HTTP call ke Gemini API (generate), DB write posts & post_tag (store), sanitasi body via Purifier.
+ *
+ * Catatan keamanan: output Gemini adalah HTML dari LLM (untrusted). WAJIB disanitasi via Purifier preset 'blog'
+ * sebelum disimpan ke DB untuk mencegah Stored XSS — LLM bisa saja dipengaruhi prompt injection.
+ */
 class AiPostController extends Controller
 {
     use GeneratesUniqueSlug;
@@ -59,6 +70,7 @@ class AiPostController extends Controller
             'tags.*' => 'exists:tags,id',
         ]);
 
+        $validated['body'] = Purifier::clean($validated['body'], 'blog');
         $validated['user_id'] = auth()->id();
         $validated['slug'] = $this->generateUniqueSlug($validated['title'], Post::class);
 

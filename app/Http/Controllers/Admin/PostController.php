@@ -9,7 +9,18 @@ use App\Models\Tag;
 use App\Traits\GeneratesUniqueSlug;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
+use Mews\Purifier\Facades\Purifier;
 
+/**
+ * Tujuan: CRUD + workflow approval artikel dari panel admin.
+ * Caller: routes/web.php grup admin -> admin.posts.* -> Admin\PostController.
+ * Dependensi: App\Models\Post/Category/Tag, Storage (disk public), GeneratesUniqueSlug trait, Mews\Purifier.
+ * Main Functions: index, create, store, edit, update, destroy, approve, reject.
+ * Side Effects: DB write posts & post_tag pivot, upload/delete featured image, sanitasi HTML body via Purifier.
+ *
+ * Catatan keamanan: field `body` mengandung HTML bebas dari editor (termasuk output AI Gemini).
+ * Sebelum disimpan ke DB, body WAJIB disanitasi via Purifier preset 'blog' untuk mencegah Stored XSS.
+ */
 class PostController extends Controller
 {
     use GeneratesUniqueSlug;
@@ -47,12 +58,14 @@ class PostController extends Controller
             'excerpt' => 'nullable|max:500',
             'body' => 'required',
             'featured_image' => 'nullable|image|mimes:jpeg,png,jpg,gif,webp|max:2048',
+            'featured_image_path' => 'nullable|string|exists:media,path',
             'status' => 'required|in:draft,published',
             'is_featured' => 'boolean',
             'tags' => 'nullable|array',
             'tags.*' => 'exists:tags,id',
         ]);
 
+        $validated['body'] = Purifier::clean($validated['body'], 'blog');
         $validated['user_id'] = auth()->id();
         $validated['slug'] = $this->generateUniqueSlug($validated['title'], Post::class);
 
@@ -95,11 +108,14 @@ class PostController extends Controller
             'excerpt' => 'nullable|max:500',
             'body' => 'required',
             'featured_image' => 'nullable|image|mimes:jpeg,png,jpg,gif,webp|max:2048',
+            'featured_image_path' => 'nullable|string|exists:media,path',
             'status' => 'required|in:draft,published',
             'is_featured' => 'boolean',
             'tags' => 'nullable|array',
             'tags.*' => 'exists:tags,id',
         ]);
+
+        $validated['body'] = Purifier::clean($validated['body'], 'blog');
 
         if ($request->filled('featured_image_path')) {
             $validated['featured_image'] = $request->featured_image_path;

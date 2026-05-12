@@ -35,6 +35,7 @@ Platform blog modern (disebut "ModernBlog" di seeder) dengan:
 - `laravel/breeze ^2.4` (dev)
 - `laravel/tinker ^3.0`
 - `laravel/pail ^1.2` (dev)
+- `mews/purifier ^3.4` — HTMLPurifier wrapper, dipakai untuk sanitasi HTML body post (anti Stored XSS)
 - `fakerphp/faker` (dev)
 - **Tidak ada**: Livewire, Inertia, Filament, Sanctum, Spatie Permission, Horizon. Akses role diimplementasi manual via kolom `users.role` + middleware.
 
@@ -97,9 +98,10 @@ POST /login
 POST /author/posts
   -> auth + author middleware
   -> Author\PostController@store
-  -> Validate: title, category_id, excerpt, body, featured_image(image|max:2048), tags[]
+  -> Validate: title, category_id, excerpt, body, featured_image(image|max:2048), featured_image_path(exists:media,path WHERE user_id=auth), tags[]
+  -> Purifier::clean(body, 'blog')  [sanitize HTML, preset 'blog']
   -> GeneratesUniqueSlug::generateUniqueSlug(title, Post::class)
-  -> featured_image: featured_image_path (dari media picker) OR upload ke disk 'public/posts'
+  -> featured_image: featured_image_path (dari media picker, validated milik user) OR upload ke disk 'public/posts'
   -> status = 'pending' (jika submit_review) | 'draft'
   -> Post::create + $post->tags()->sync($tagIds)
   -> redirect author.posts.index
@@ -132,7 +134,7 @@ POST /admin/ai-posts/generate
 
 POST /admin/ai-posts
   -> Admin\AiPostController@store
-  -> Validate + generateUniqueSlug -> Post::create + tags sync
+  -> Validate + Purifier::clean(body, 'blog') + generateUniqueSlug -> Post::create + tags sync
 ```
 
 ## 8. Media Upload (Admin/Author)
@@ -140,7 +142,7 @@ POST /admin/ai-posts
 POST /author/media  (atau /admin/media)
   -> auth + author|admin middleware
   -> MediaController@store
-  -> Validate: files[] max:10, each image|max:5120 KB, mimes jpeg,png,jpg,gif,webp,svg
+  -> Validate: files[] max:10, each image|max:5120 KB, mimes jpeg,png,jpg,gif,webp (SVG tidak diizinkan — anti XSS)
   -> foreach file: Str::uuid().ext -> storeAs('media', $filename, 'public')
   -> getimagesize untuk width/height
   -> Media::create(user_id, filename, path, mime_type, size, width, height)
@@ -206,7 +208,7 @@ project-blog/
 │  ├─ Traits/GeneratesUniqueSlug.php
 │  └─ View/Components/           (AppLayout.php, GuestLayout.php — Breeze)
 ├─ bootstrap/app.php
-├─ config/                       (app, auth, cache, database, filesystems, logging, mail, queue, services, session)
+├─ config/                       (app, auth, cache, database, filesystems, logging, mail, purifier, queue, services, session)
 ├─ database/
 │  ├─ factories/UserFactory.php
 │  ├─ migrations/                (13 files: users, cache, jobs, categories, tags, posts+post_tag, comments, settings, media, posts-status-update, performance-indexes)
@@ -289,6 +291,7 @@ project-blog/
 
 ## Services
 - `app/Services/GeminiService.php` — `generatePost(topic, language='id')`: call Google Gemini `generateContent` endpoint, parse JSON response, return `['title','excerpt','body']`. Throws `RuntimeException`. **Service**
+- `Mews\Purifier\Facades\Purifier` (package `mews/purifier`) — dipakai di Admin/Author PostController dan AiPostController untuk `Purifier::clean($body, 'blog')` sebelum simpan ke DB. Preset `blog` didefinisikan di `config/purifier.php`. **External Library**
 
 ## Traits
 - `app/Traits/GeneratesUniqueSlug.php` — `generateUniqueSlug(title, modelClass, excludeId=null)`: loop increment hingga slug unik. Dipakai oleh Admin\PostController, Author\PostController, Admin\AiPostController. **Helper/Trait**
@@ -326,6 +329,7 @@ project-blog/
 
 ## Config (custom yang perlu diperhatikan)
 - `config/services.php` — tambahan key `gemini` (api_key, model). **Config**
+- `config/purifier.php` — konfigurasi HTMLPurifier. Preset `blog` custom (whitelist h2-h4, p, ul/ol, blockquote, code/pre, a, img, strong/em; target=_blank + rel=nofollow pada link; scheme hanya http/https/mailto). Dipakai oleh Admin/Author PostController + AiPostController. **Config**
 - `config/database.php` — konfigurasi `pgsql` tersedia (default port 5432, sslmode `prefer`). **Config**
 - `config/auth.php` — guard default `web`, provider `users` → model `App\Models\User`. **Config**
 
@@ -480,17 +484,19 @@ Raw query lain (bukan PG-specific, kompatibel MySQL/SQLite):
 - `LoginRequest` — rate limit 5 attempts, keyed by lowercased email + IP.
 - `RegisteredUserController` — email `lowercase`, `unique:users`; password pakai `Rules\Password::defaults()`.
 - `ProfileUpdateRequest` — email unique ignore self.
-- Upload image/media: MIME whitelist (`jpeg,png,jpg,gif,webp[,svg]`), size max 2MB (avatar/featured) atau 5MB (media library), max 10 files per request.
+- Upload image/media: MIME whitelist (`jpeg,png,jpg,gif,webp` — SVG sengaja dilarang), size max 2MB (avatar/featured) atau 5MB (media library), max 10 files per request.
+- `featured_image_path` (media picker) divalidasi via `exists:media,path`; di Author controller ditambah `where('user_id', auth()->id())` agar hanya bisa refer media milik sendiri.
+- `Post::body` disanitasi via `Purifier::clean(..., 'blog')` di Admin/Author PostController + AiPostController sebelum simpan ke DB.
 - Komentar: rate-limit 6/menit + validasi body 3..1000 chars.
 - AI generate: topic max 500, language whitelist `id|en`.
 
 ## Area Risiko Keamanan (observasi, bukan rewrite kode)
 - `robots.txt` di-generate inline via closure, bukan file statis. OK.
-- **Upload SVG** diizinkan di MediaController (`mimes:...,svg`). SVG bisa mengandung JavaScript aktif — pastikan SVG tidak disajikan langsung sebagai `<object>`/`<iframe>`.
 - `Admin\PostController` tidak menggunakan `PostPolicy`. Admin middleware sudah cukup secara fungsional, tapi berpotensi inkonsistensi (admin bisa bypass policy rule yang mungkin ditambah nanti).
 - `CommentController::store` — validasi email guest tidak disimpan unik; tidak ada bot protection (captcha/honeypot), hanya throttle 6/menit.
 - `AppServiceProvider::boot` memaksa HTTPS hanya saat `env == 'production'`. Pastikan `APP_ENV` di-set benar.
 - `GeminiService` mengekspos pesan error API langsung ke user (`back()->with('error', $e->getMessage())`). Bisa bocorkan detail API key jika response Gemini tidak dibersihkan.
+- Security headers (X-Frame-Options, X-Content-Type-Options, Referrer-Policy, HSTS) belum di-set; belum ada CSP.
 
 ---
 

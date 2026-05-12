@@ -9,7 +9,19 @@ use App\Models\Tag;
 use App\Traits\GeneratesUniqueSlug;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Validation\Rule;
+use Mews\Purifier\Facades\Purifier;
 
+/**
+ * Tujuan: CRUD artikel milik author sendiri + submit untuk review.
+ * Caller: routes/web.php grup author -> author.posts.* -> Author\PostController.
+ * Dependensi: App\Models\Post/Category/Tag, Storage (disk public), GeneratesUniqueSlug trait, PostPolicy, Mews\Purifier.
+ * Main Functions: index, create, store, edit, update, destroy, submitForReview.
+ * Side Effects: DB write posts & post_tag pivot, upload/delete featured image, sanitasi HTML body via Purifier.
+ *
+ * Catatan keamanan: field `body` mengandung HTML dari editor. WAJIB disanitasi via Purifier preset 'blog'
+ * sebelum disimpan ke DB untuk mencegah Stored XSS.
+ */
 class PostController extends Controller
 {
     use GeneratesUniqueSlug;
@@ -43,16 +55,20 @@ class PostController extends Controller
 
     public function store(Request $request)
     {
+        $mediaOwnershipRule = Rule::exists('media', 'path')->where(fn ($q) => $q->where('user_id', auth()->id()));
+
         $validated = $request->validate([
             'title' => 'required|max:255',
             'category_id' => 'nullable|exists:categories,id',
             'excerpt' => 'nullable|max:500',
             'body' => 'required',
             'featured_image' => 'nullable|image|mimes:jpeg,png,jpg,gif,webp|max:2048',
+            'featured_image_path' => ['nullable', 'string', $mediaOwnershipRule],
             'tags' => 'nullable|array',
             'tags.*' => 'exists:tags,id',
         ]);
 
+        $validated['body'] = Purifier::clean($validated['body'], 'blog');
         $validated['user_id'] = auth()->id();
         $validated['slug'] = $this->generateUniqueSlug($validated['title'], Post::class);
 
@@ -92,15 +108,20 @@ class PostController extends Controller
     {
         $this->authorize('update', $post);
 
+        $mediaOwnershipRule = Rule::exists('media', 'path')->where(fn ($q) => $q->where('user_id', auth()->id()));
+
         $validated = $request->validate([
             'title' => 'required|max:255',
             'category_id' => 'nullable|exists:categories,id',
             'excerpt' => 'nullable|max:500',
             'body' => 'required',
             'featured_image' => 'nullable|image|mimes:jpeg,png,jpg,gif,webp|max:2048',
+            'featured_image_path' => ['nullable', 'string', $mediaOwnershipRule],
             'tags' => 'nullable|array',
             'tags.*' => 'exists:tags,id',
         ]);
+
+        $validated['body'] = Purifier::clean($validated['body'], 'blog');
 
         if ($request->filled('featured_image_path')) {
             $validated['featured_image'] = $request->featured_image_path;
