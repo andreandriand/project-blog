@@ -21,7 +21,7 @@ Platform blog modern (disebut "ModernBlog" di seeder) dengan:
 - **Laravel**: `^13.0`
 - **Database**: Konfigurasi `pgsql` tersedia; default `.env.example` menggunakan `sqlite`. Migration `2024_01_02_000001_update_posts_add_pending_rejected_status.php` memakai **raw SQL PostgreSQL** (`ALTER TABLE ... CHECK CONSTRAINT`). Artinya proyek **ditargetkan untuk PostgreSQL di production**.
 - **Auth**: Laravel Breeze `^2.4` (Blade stack)
-- **Frontend**: Blade + **Alpine.js 3** + **Tailwind CSS 3** (via `laravel-vite-plugin`)
+- **Frontend**: Blade + **Alpine.js 3** + **Tailwind CSS 3** (via `laravel-vite-plugin`). Font **Inter** di-load dari Bunny Fonts (GDPR-friendly, no tracking).
 - **Queue**: `database` driver (tabel `jobs`)
 - **Cache**: `database` driver (tabel `cache`)
 - **Session**: `database` driver (tabel `sessions`)
@@ -68,7 +68,7 @@ GET /blog/{post:slug}
   -> PostController@show (Post model route-binding via slug)
   -> abort(404) jika status != 'published'
   -> session()->has('viewed_post_ID') ? skip : $post->increment('views_count') + session put
-  -> load(user, category, tags, approvedComments.replies, approvedComments.user)
+  -> load(user, category, tags, approvedComments.user, approvedComments.replies.user)
   -> Post::published()->where(category_id)->take(3)  [related]
   -> view('posts.show')
 ```
@@ -253,6 +253,7 @@ project-blog/
 
 ## Middleware
 - `app/Http/Middleware/SetLocale.php` — `handle()`: pasang locale dari `session('locale')` jika ∈ [id, en]. Append ke grup `web`. **Middleware**
+- `app/Http/Middleware/SecurityHeaders.php` — `handle()`: set X-Frame-Options, X-Content-Type-Options, Referrer-Policy, dan HSTS (conditional, hanya jika `isSecure()`). Append ke grup `web`. **Middleware**
 - `app/Http/Middleware/AdminMiddleware.php` — `handle()`: `abort(403)` jika non-admin. Alias `admin`. **Middleware**
 - `app/Http/Middleware/AuthorMiddleware.php` — `handle()`: `abort(403)` jika non-author (admin juga author). Alias `author`. **Middleware**
 
@@ -496,17 +497,17 @@ Raw query lain (bukan PG-specific, kompatibel MySQL/SQLite):
 - `CommentController::store` — validasi email guest tidak disimpan unik; tidak ada bot protection (captcha/honeypot), hanya throttle 6/menit.
 - `AppServiceProvider::boot` memaksa HTTPS hanya saat `env == 'production'`. Pastikan `APP_ENV` di-set benar.
 - `GeminiService` mengekspos pesan error API langsung ke user (`back()->with('error', $e->getMessage())`). Bisa bocorkan detail API key jika response Gemini tidak dibersihkan.
-- Security headers (X-Frame-Options, X-Content-Type-Options, Referrer-Policy, HSTS) belum di-set; belum ada CSP.
+- Security headers dasar (X-Frame-Options, X-Content-Type-Options, Referrer-Policy, HSTS-conditional) sudah dipasang via `SecurityHeaders` middleware. **CSP belum di-set** — butuh tuning terpisah karena view pakai inline Alpine handler dan eksternal font/image.
 
 ---
 
 # Risks / Blind Spots
 
-- **Ketidakkonsistenan DB driver**:
-  - `.env.example` → `DB_CONNECTION=sqlite`
-  - Migration `2024_01_02_000001` pakai PostgreSQL raw SQL (`CHECK` constraint dengan `::text` cast). Migration ini akan gagal di SQLite/MySQL.
-  - `composer.json` script `post-create-project-cmd` masih membuat `database/database.sqlite` dan `migrate --graceful`.
-  - → Saat boot ulang di env baru: ada kemungkinan migration sebagian jalan, sebagian fail. Tidak bisa dipetakan tanpa info env aktif production.
+- **Ketidakkonsistenan DB driver** (diperbarui 2026-05-12 — sudah diperbaiki di level dokumentasi):
+  - `.env.example` → sekarang `DB_CONNECTION=pgsql` (sesuai kenyataan project).
+  - `composer.json` → script `post-create-project-cmd` yang buat `database/database.sqlite` sudah dihapus.
+  - `README.md` → section "Database Requirement" eksplisit menyebut PostgreSQL wajib.
+  - Migration `2024_01_02_000001` masih PostgreSQL-only (by design). SQLite/MySQL tidak didukung.
 - **`queue:listen` ada di script dev, tapi tidak ada Job class** di `app/Jobs/`. Artinya saat ini queue kosong. Future integrations (misal async Gemini call) belum ada.
 - **Tidak ada scheduler** di `bootstrap/app.php` (tidak ada `withSchedule`), dan `routes/console.php` hanya berisi command `inspire`. Tidak ada scheduled task.
 - **Tidak ada API routes** (`routes/api.php` tidak ada, tidak didaftarkan di `bootstrap/app.php`). `MediaController::json` & `CommentController` return JSON tetapi melalui web route.

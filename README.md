@@ -1,57 +1,81 @@
 <p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
 
-<p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
-</p>
+# AndBlog — Laravel 13 Modern Blog
 
-## About Laravel
+Platform blog modern dengan workflow author/admin, media library, dan AI post generator via Google Gemini.
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+## Tech Stack
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+- **PHP** ≥ 8.3
+- **Laravel** 13
+- **PostgreSQL** (wajib — lihat [Database Requirement](#database-requirement))
+- **Frontend**: Blade + Alpine.js 3 + Tailwind CSS 3 + Vite
+- **Auth**: Laravel Breeze (Blade stack)
+- **AI**: Google Gemini API (`gemini-2.5-flash`)
+- **HTML Sanitizer**: `mews/purifier` (preset `blog`)
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+## Database Requirement
 
-## Learning Laravel
+Project ini **membutuhkan PostgreSQL**. SQLite dan MySQL **tidak didukung** karena migration `2024_01_02_000001_update_posts_add_pending_rejected_status.php` memakai raw SQL PostgreSQL (`ALTER TABLE ... CHECK CONSTRAINT` dengan cast `::text`).
 
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework.
+Minimal versi PostgreSQL: 13+ (untuk dukungan penuh syntax yang dipakai).
 
-In addition, [Laracasts](https://laracasts.com) contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
-
-You can also watch bite-sized lessons with real-world projects on [Laravel Learn](https://laravel.com/learn), where you will be guided through building a Laravel application from scratch while learning PHP fundamentals.
-
-## Agentic Development
-
-Laravel's predictable structure and conventions make it ideal for AI coding agents like Claude Code, Cursor, and GitHub Copilot. Install [Laravel Boost](https://laravel.com/docs/ai) to supercharge your AI workflow:
+## Quick Start
 
 ```bash
-composer require laravel/boost --dev
+# 1. Install dependencies
+composer install
+npm install
 
-php artisan boost:install
+# 2. Environment
+cp .env.example .env
+php artisan key:generate
+
+# 3. Edit .env — pastikan DB_CONNECTION=pgsql dan credentials PostgreSQL sudah benar.
+#    Set juga GEMINI_API_KEY jika fitur AI post generator ingin dipakai.
+
+# 4. Database (buat database PostgreSQL dulu)
+createdb blog_laravel              # sesuaikan nama dengan DB_DATABASE di .env
+php artisan migrate --seed
+php artisan storage:link           # untuk akses file upload di /storage/*
+
+# 5. Build assets & run
+npm run build                      # production build
+# atau development:
+composer run dev                   # concurrent: serve + queue + pail + vite
 ```
 
-Boost provides your agent 15+ tools and skills that help agents build Laravel applications while following best practices.
+## Default Credentials (dari seeder)
 
-## Contributing
+| Role    | Email               | Password   |
+|---------|---------------------|------------|
+| admin   | admin@blog.com      | `password` |
+| author  | budi@blog.com       | `password` |
+| author  | sari@blog.com       | `password` |
+| reader  | andi@blog.com       | `password` |
 
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
+**Ganti password semua user ini sebelum deploy ke environment manapun selain local.**
 
-## Code of Conduct
+## Development
 
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
+```bash
+# Serve + queue + vite + pail log viewer (concurrent)
+composer run dev
 
-## Security Vulnerabilities
+# Tests (saat ini hanya Breeze auth tests)
+php artisan test
 
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
+# Lint
+vendor/bin/pint
+```
+
+## Project Map
+
+Lihat [`SYSTEM_MAP.md`](SYSTEM_MAP.md) untuk navigasi lengkap: arsitektur, alur request, modul, skema DB, integrasi eksternal, dan catatan keamanan.
+
+## Optimization Backlog
+
+Lihat [`OPTIMIZATION-REPORT.md`](OPTIMIZATION-REPORT.md) untuk daftar rekomendasi perbaikan yang belum dieksekusi (performance, quality, test coverage, CI/CD).
 
 ## License
 

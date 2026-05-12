@@ -44,7 +44,13 @@ class PostController extends Controller
             session()->put($sessionKey, true);
         }
 
-        $post->load(['user', 'category', 'tags', 'approvedComments.replies', 'approvedComments.user']);
+        $post->load([
+            'user',
+            'category',
+            'tags',
+            'approvedComments.user',
+            'approvedComments.replies.user',
+        ]);
 
         $relatedPosts = Post::published()
             ->where('id', '!=', $post->id)

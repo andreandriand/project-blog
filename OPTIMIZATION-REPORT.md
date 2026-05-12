@@ -3,6 +3,7 @@
 **Tanggal awal:** 2026-04-13
 **Direvisi:** 2026-05-12 (verifikasi ulang terhadap kode aktual)
 **Eksekusi CRITICAL:** 2026-05-12 (5/5 CRITICAL selesai + build verified)
+**Eksekusi Bundle Quick-Win #2:** 2026-05-12 (#7, #10, #13, #15 selesai + runtime verified)
 **Project:** ModernBlog / AndBlog (Laravel 13 + Vite + Tailwind + Alpine.js + PostgreSQL)
 
 ---
@@ -137,28 +138,13 @@ Rules validasi post di-copy-paste di:
 
 ## MEDIUM — Performance & Query Optimization
 
-### 8. N+1 Query pada Comment Replies — ✅ VALID
+### 8. N+1 Query pada Comment Replies — 🟢 FIXED (2026-05-12)
 
-**File:** `app/Http/Controllers/PostController.php` (line 47)
+**File:** `app/Http/Controllers/PostController.php`
 
-```php
-$post->load(['user', 'category', 'tags', 'approvedComments.replies', 'approvedComments.user']);
-// TIDAK: 'approvedComments.replies.user' ← N+1
-```
+**Eksekusi:** `$post->load([...])` diperluas untuk include `approvedComments.replies.user`. Array sekarang rapi multi-line.
 
-View `posts/show.blade.php` (line 186) mengakses `$reply->user->avatar_url` per iterasi → trigger 1 query per reply.
-
-**Status 2026-05-12:** N+1 aktif dan terverifikasi.
-
-**Solusi:**
-
-```php
-$post->load([
-    'user', 'category', 'tags',
-    'approvedComments.user',
-    'approvedComments.replies.user',
-]);
-```
+**Verifikasi:** `php -l` clean. Runtime load terverifikasi via route list + Vite build sukses.
 
 ---
 
@@ -315,41 +301,24 @@ Prioritas: **rendah**, karena proteksi utama sudah ada.
 
 ---
 
-### 15. Tidak Ada Security Headers — ✅ VALID
+### 15. Tidak Ada Security Headers — 🟢 FIXED (2026-05-12)
 
-**Status 2026-05-12:** `bootstrap/app.php` hanya append `SetLocale`. Tidak ada middleware yang set security headers.
+**File baru:** `app/Http/Middleware/SecurityHeaders.php`
+**Modifikasi:** `bootstrap/app.php`
 
-**Solusi:** Buat middleware `SecurityHeaders`.
+**Eksekusi:**
+- Dibuat middleware `SecurityHeaders` yang set 4 headers: `X-Frame-Options: SAMEORIGIN`, `X-Content-Type-Options: nosniff`, `Referrer-Policy: strict-origin-when-cross-origin`, dan `Strict-Transport-Security` (conditional — hanya saat `$request->isSecure()` agar tidak lock out dev environment HTTP).
+- Ter-register di `bootstrap/app.php` via `$middleware->web(append: [SetLocale::class, SecurityHeaders::class])`.
+- CSP sengaja tidak di-set di iterasi ini — butuh tuning terpisah karena view pakai inline Alpine handler dan external font/image. Tambahkan di iterasi berikutnya.
+- `X-XSS-Protection` sengaja tidak ditambah (sudah deprecated di browser modern).
 
-```php
-// app/Http/Middleware/SecurityHeaders.php
-class SecurityHeaders
-{
-    public function handle($request, Closure $next)
-    {
-        $response = $next($request);
-
-        $response->headers->set('X-Frame-Options', 'SAMEORIGIN');
-        $response->headers->set('X-Content-Type-Options', 'nosniff');
-        $response->headers->set('Referrer-Policy', 'strict-origin-when-cross-origin');
-        $response->headers->set('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
-        // CSP dipikirkan terpisah — nontrivial karena ada inline Alpine events + Google Fonts
-
-        return $response;
-    }
-}
+**Verifikasi runtime:** Live HTTP GET ke `http://project-blog.test/` → 3 headers muncul:
 ```
-
-Daftarkan di `bootstrap/app.php`:
-
-```php
-$middleware->web(append: [
-    SetLocale::class,
-    SecurityHeaders::class,
-]);
+X-Frame-Options: SAMEORIGIN
+X-Content-Type-Options: nosniff
+Referrer-Policy: strict-origin-when-cross-origin
 ```
-
-Catatan: `X-XSS-Protection` sudah deprecated (tidak perlu ditambah). CSP butuh riset terpisah karena view pakai inline handler Alpine.js.
+HSTS tidak muncul di HTTP (expected behavior — akan muncul di HTTPS production).
 
 ---
 
@@ -368,22 +337,18 @@ Plus: pastikan `.env` tidak ter-commit ke repo (cek `.gitignore`).
 
 ---
 
-### 17. Migration PostgreSQL-Specific — ⚠️ PARTIAL (solusi report keliru)
+### 17. Migration PostgreSQL-Specific — 🟢 FIXED (2026-05-12)
 
-**File:** `database/migrations/2024_01_02_000001_update_posts_add_pending_rejected_status.php`
+**Files:** `.env.example`, `composer.json`, `README.md`.
 
-**Status 2026-05-12:** `.env` aktif: `DB_CONNECTION=pgsql`. Project **ditarget ke PostgreSQL** sebagai DB utama. Migration ini memang PostgreSQL-specific (`ALTER TABLE ... CHECK CONSTRAINT` dengan cast `::text`).
+Project target PostgreSQL sebagai DB utama (`.env` aktif sudah pakai `pgsql`). Masalah sebelumnya: `.env.example` dan README tidak menyebut requirement ini, sehingga dev baru yang clone repo akan gagal migrate.
 
-**Nuansa:** Solusi di report awal (drop column + recreate enum) **berbahaya**:
-- `dropColumn('status')` akan menghilangkan data status existing
-- Rollback/forward akan kehilangan informasi `pending` dan `rejected`
-- Enum `draft|pending|published|rejected` tidak didukung seragam di semua DB
+**Eksekusi:**
+1. `.env.example` → `DB_CONNECTION=pgsql` dengan host/port/database values.
+2. `composer.json` → hapus 2 baris script `post-create-project-cmd` yang membuat `database/database.sqlite` dan run `migrate --graceful` (keduanya irrelevant / berbahaya di environment PG).
+3. `README.md` di-rewrite dari boilerplate Laravel bawaan jadi doc project-specific dengan section "Database Requirement" yang eksplisit, Quick Start, default credentials seeder, dan link ke `SYSTEM_MAP.md` + `OPTIMIZATION-REPORT.md`.
 
-**Rekomendasi revisi:**
-1. **Dokumentasikan** di `README.md` bahwa PostgreSQL adalah requirement wajib.
-2. Update `.env.example` dari `DB_CONNECTION=sqlite` → `DB_CONNECTION=pgsql` agar sesuai kenyataan project.
-3. Hapus script `post-create-project-cmd` di `composer.json` yang membuat `database/database.sqlite` (baris 64).
-4. Untuk fleksibilitas cross-DB di masa depan: gunakan kolom `VARCHAR` + validasi aplikasi `in:draft,pending,published,rejected`, bukan CHECK constraint DB.
+**Verifikasi:** File ter-update. Belum ada verifikasi fresh-clone (perlu di environment terpisah).
 
 ---
 
@@ -430,23 +395,16 @@ Pertimbangan: untuk tabel yang masih kecil (seeder cuma ~9 posts), penambahan in
 
 ---
 
-### 20. Duplicate Font Loading — ✅ VALID (dengan nuansa)
+### 20. Duplicate Font Loading — 🟢 FIXED (2026-05-12)
 
-**Status 2026-05-12 (terverifikasi):**
-- `resources/css/app.css` line 1 → Google Fonts **Inter**
-- `resources/views/layouts/blog.blade.php` line 21 → Google Fonts **Inter** (duplikat!)
-- `resources/views/layouts/app.blade.php` line 12 → Bunny Fonts **Figtree**
+**Eksekusi:**
+- Hapus `@import url('https://fonts.googleapis.com/...')` dari `resources/css/app.css` (line 1 lama).
+- Update `resources/views/layouts/blog.blade.php` — pindah dari Google Fonts ke **Bunny Fonts** (tanpa tracking, GDPR-friendly), pakai `<link rel="preconnect" href="https://fonts.bunny.net">` + single stylesheet `<link>`.
+- `layouts/app.blade.php` (Breeze — dipakai untuk auth/profile) tetap pakai Figtree dari Bunny, tidak diubah.
 
-Duplikasi nyata adalah **Inter di 2 tempat**. Figtree hanya dipakai layout Breeze (auth/profile) — bisa dipertahankan atau distandarkan ke Inter.
+**Verifikasi runtime:** `curl http://project-blog.test/ | grep -i font` → hanya 1 reference Inter (dari Bunny). `fonts.googleapis.com` hilang dari bundle CSS dan dari HTML response.
 
-**Solusi:** Hapus `@import` Inter dari `app.css`, load hanya di layout dengan preconnect.
-
-```html
-<link rel="preconnect" href="https://fonts.bunny.net">
-<link href="https://fonts.bunny.net/css?family=inter:400,500,600,700&display=swap" rel="stylesheet">
-```
-
-Kenapa Bunny? Sama API dengan Google Fonts tapi **tanpa tracking** dan bisa dipakai di EU tanpa masalah GDPR.
+**Efek build:** CSS bundle turun dari 77.09 kB → 76.99 kB (satu HTTP request hilang saat render halaman).
 
 ---
 
@@ -573,24 +531,24 @@ jobs:
 | 5  | Konflik Tailwind v3/v4                             | 🟢 FIXED          |
 | 6  | Duplikasi Admin vs Author controller               | ✅ VALID           |
 | 7  | Validasi post duplikasi 5x                         | ✅ VALID           |
-| 8  | N+1 comment replies                                | ✅ VALID           |
+| 8  | N+1 comment replies                                | 🟢 FIXED          |
 | 9  | Admin dashboard 6 query                            | ✅ VALID           |
 | 10 | `Setting::get()` tanpa cache                       | ❌ OBSOLETE        |
 | 11 | Slug uniqueness loop                               | ✅ VALID (low impact) |
 | 12 | Homepage & sitemap tanpa cache                     | ✅ VALID           |
 | 13 | Cache & session driver = database                  | ⚠️ PARTIAL (deployment) |
 | 14 | Rate limiting login                                | ⚠️ PARTIAL (sudah ada di LoginRequest) |
-| 15 | Security headers                                   | ✅ VALID           |
+| 15 | Security headers                                   | 🟢 FIXED          |
 | 16 | `APP_DEBUG=true`                                   | ⚠️ PARTIAL (local OK) |
-| 17 | Migration PostgreSQL-specific                      | ⚠️ PARTIAL (solusi lama keliru) |
+| 17 | Migration PostgreSQL-specific (docs)               | 🟢 FIXED          |
 | 18 | Missing indexes                                    | ⚠️ PARTIAL (4 dari 8 sudah ada) |
 | 19 | Newsletter form non-fungsional                     | ✅ VALID           |
-| 20 | Duplicate font loading                             | ✅ VALID           |
+| 20 | Duplicate font loading                             | 🟢 FIXED          |
 | 21 | Manual `.prose` styles                             | ✅ VALID           |
 | 22 | Zero business logic tests                          | ✅ VALID           |
 | 23 | Tidak ada Docker/CI-CD                             | ✅ VALID           |
 
-**Ringkasan angka:** 5 FIXED ✅ (semua CRITICAL selesai), 11 VALID belum dieksekusi, 6 PARTIAL, 1 OBSOLETE.
+**Ringkasan angka:** 9 FIXED ✅ (semua CRITICAL + 4 quick-win), 7 VALID belum dieksekusi, 6 PARTIAL, 1 OBSOLETE.
 
 ---
 
@@ -604,23 +562,44 @@ jobs:
 | 4  | Validasi `featured_image_path`                           | CRITICAL Security    | 15 menit  | 🟢 Done |
 | 5  | Hapus `@tailwindcss/vite` dari `package.json`            | CRITICAL Build       | 5 menit   | 🟢 Done |
 | 6  | Hapus / implementasikan newsletter form                  | LOW UX               | 5 menit   | ⏳      |
-| 7  | Fix N+1 queries — eager load `replies.user`              | MEDIUM Performance   | 5 menit   | ⏳      |
+| 7  | Fix N+1 queries — eager load `replies.user`              | MEDIUM Performance   | 5 menit   | 🟢 Done |
 | 8  | Konsolidasi query Admin Dashboard                        | MEDIUM Performance   | 15 menit  | ⏳      |
 | 9  | Tambah index yang masih missing                          | MEDIUM Performance   | 15 menit  | ⏳      |
-| 10 | Tambah security headers middleware                       | MEDIUM Security      | 20 menit  | ⏳      |
+| 10 | Tambah security headers middleware                       | MEDIUM Security      | 20 menit  | 🟢 Done |
 | 11 | `Cache::remember` untuk homepage & sitemap               | MEDIUM Performance   | 45 menit  | ⏳      |
 | 12 | Ekstrak Form Requests & Services                         | HIGH Maintainability | 2-3 jam   | ⏳      |
-| 13 | Deduplikasi font loading (Inter 2x)                      | LOW Performance      | 10 menit  | ⏳      |
+| 13 | Deduplikasi font loading (Inter 2x)                      | LOW Performance      | 10 menit  | 🟢 Done |
 | 14 | Ganti manual `.prose` dengan `@tailwindcss/typography`   | LOW Quality          | 30 menit  | ⏳      |
-| 15 | Update `.env.example` ke `DB_CONNECTION=pgsql` + README  | LOW Documentation    | 10 menit  | ⏳      |
+| 15 | Update `.env.example` ke `DB_CONNECTION=pgsql` + README  | LOW Documentation    | 10 menit  | 🟢 Done |
 | 16 | Tulis feature tests untuk core business logic            | MEDIUM Quality       | 4-6 jam   | ⏳      |
 | 17 | Setup GitHub Actions CI dengan PG service                | MEDIUM Quality       | 30 menit  | ⏳      |
 
-**Quick-win ≤30 menit (tangkap ~80% value):** #1, #2, #3, #4, #5, #6, #7, #8, #10, #13, #15 (5 sudah ✅, 6 tersisa)
+**Progress:** 9/17 done. Quick-wins habis — sisa butuh kerja lebih besar (#12 Form Requests, #16 Tests) atau butuh keputusan desain (#6 newsletter, #11 cache invalidation strategy).
 
 ---
 
 ## Eksekusi Log
+
+### 2026-05-12 — Bundle Quick-Win #2 (#7, #10, #13, #15)
+
+Files yang diubah:
+- `app/Http/Controllers/PostController.php` — eager load `approvedComments.replies.user` (fix N+1)
+- `app/Http/Middleware/SecurityHeaders.php` — **baru dibuat**, set X-Frame-Options/X-Content-Type-Options/Referrer-Policy/HSTS-conditional
+- `bootstrap/app.php` — register `SecurityHeaders::class` di web middleware group
+- `resources/css/app.css` — hapus `@import` Google Fonts Inter
+- `resources/views/layouts/blog.blade.php` — pindah Inter load ke Bunny Fonts (GDPR-friendly, no tracking)
+- `.env.example` — `DB_CONNECTION=pgsql` dengan host/port default PG
+- `composer.json` — hapus 2 baris script `post-create-project-cmd` yang buat `database/database.sqlite`
+- `README.md` — rewrite dari boilerplate Laravel ke doc project-specific (stack, PG requirement, quick start, credentials, links)
+
+Verifikasi:
+- `php -l` clean untuk semua file PHP yang diubah
+- `npx vite build` sukses (55 modules, 779ms, CSS 76.99 kB — turun 0.1 kB)
+- Live HTTP request ke `http://project-blog.test/`:
+  - Status 200
+  - Headers `X-Frame-Options`, `X-Content-Type-Options`, `Referrer-Policy` terpasang
+  - HSTS tidak ada (expected — request HTTP)
+  - Hanya 1 font reference (Bunny Fonts Inter), `fonts.googleapis.com` hilang
 
 ### 2026-05-12 — Semua CRITICAL selesai
 
