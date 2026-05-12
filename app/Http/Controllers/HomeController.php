@@ -23,7 +23,7 @@ class HomeController extends Controller
             ->get();
 
         $categories = Category::withCount('publishedPosts')
-            ->having('published_posts_count', '>', 0)
+            ->has('publishedPosts')
             ->orderByDesc('published_posts_count')
             ->take(8)
             ->get();
