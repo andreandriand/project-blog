@@ -73,6 +73,10 @@ Lihat [`SYSTEM_MAP.md`](SYSTEM_MAP.md) untuk navigasi lengkap: arsitektur, alur 
 
 ## Production Deployment
 
+Untuk panduan deployment lengkap step-by-step di berbagai platform (VPS Ubuntu, Docker, aaPanel di Armbian), lihat [`DEPLOYMENT.md`](DEPLOYMENT.md).
+
+Section di bawah ini cuma ringkasan high-level. Detail lengkap (firewall, SSL, queue worker daemon, backup cron, troubleshooting) ada di file deployment guide.
+
 ### Seeder
 
 ⚠️ **JANGAN** jalankan `php artisan db:seed` (default `DatabaseSeeder`) di production — ia membuat 4 user dummy dengan password `password`.

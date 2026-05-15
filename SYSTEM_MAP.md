@@ -257,7 +257,7 @@ project-blog/
 ├─ phpunit.xml
 ├─ .github/
 │  └─ workflows/
-│     └─ ci.yml                  (matrix PHP 8.3 + 8.4, PG 16 service, parallel test, Pint lint)
+│     └─ ci.yml                  (PHP 8.4, PG 16 service, parallel test, Pint lint)
 └─ OPTIMIZATION-REPORT.md        (catatan perubahan + status item)
 ```
 

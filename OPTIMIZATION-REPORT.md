@@ -464,7 +464,7 @@ Ganti class manual `.prose` dengan `prose prose-lg dark:prose-invert` dari plugi
 
 **Eksekusi:** GitHub Actions workflow dengan 2 job:
 
-1. **Test job** (matrix PHP 8.3 + 8.4):
+1. **Test job** (PHP 8.4):
    - PostgreSQL 16 sebagai service (matches production target)
    - Cache Composer + npm packages
    - `composer validate --strict`
@@ -601,7 +601,7 @@ Ganti class manual `.prose` dengan `prose prose-lg dark:prose-invert` dari plugi
 
 **Phase 4: GitHub Actions CI**
 - `.github/workflows/ci.yml` — **baru**, 2 job:
-  - `test`: matrix PHP 8.3 + 8.4, PG 16 service, composer + npm cache, migrate + parallel test
+  - `test`: PHP 8.4, PG 16 service, composer + npm cache, migrate + parallel test
   - `lint`: `vendor/bin/pint --test` (verifikasi code style tanpa auto-fix)
 - Trigger: push + PR ke main/master
 
