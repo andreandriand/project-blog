@@ -36,6 +36,7 @@ Platform blog modern (disebut "ModernBlog" di seeder) dengan:
 - `laravel/tinker ^3.0`
 - `laravel/pail ^1.2` (dev)
 - `mews/purifier ^3.4` — HTMLPurifier wrapper, dipakai untuk sanitasi HTML body post (anti Stored XSS)
+- `sentry/sentry-laravel ^4.25` — error monitoring (no-op kalau `SENTRY_LARAVEL_DSN` kosong)
 - `fakerphp/faker` (dev)
 - **Tidak ada**: Livewire, Inertia, Filament, Sanctum, Spatie Permission, Horizon. Akses role diimplementasi manual via kolom `users.role` + middleware.
 
@@ -215,6 +216,10 @@ project-blog/
 │  └─ seeders/DatabaseSeeder.php
 ├─ lang/
 ├─ public/
+│  ├─ favicon.ico
+│  └─ images/
+│     ├─ logo.webp
+│     └─ post-default.svg        (fallback featured image, gradient brand)
 ├─ resources/
 │  ├─ css/app.css
 │  ├─ js/{app.js, bootstrap.js}  (Alpine.js + axios)
@@ -233,13 +238,27 @@ project-blog/
 │  ├─ web.php
 │  ├─ auth.php                   (Breeze)
 │  └─ console.php                (hanya 'inspire')
-├─ tests/                        (Breeze default auth + profile tests)
+├─ tests/                        (68 test passing, 166 assertions)
+│  ├─ Feature/
+│  │  ├─ Admin/                  (PostController, MediaController, UserController — regression coverage CRITICAL bugs)
+│  │  ├─ Author/                 (PostController — ownership policy + Purifier)
+│  │  ├─ Auth/                   (Breeze default, redirect ke 'home' bukan 'dashboard')
+│  │  ├─ ExampleTest.php
+│  │  ├─ ProfileTest.php
+│  │  └─ PublicPostTest.php      (smoke + N+1 budget assertion + security headers)
+│  ├─ Unit/
+│  │  ├─ ExampleTest.php
+│  │  └─ PurifierBlogPresetTest.php (12 attack vectors per-isolated)
+│  └─ TestCase.php
 ├─ composer.json
 ├─ package.json
 ├─ tailwind.config.js
 ├─ vite.config.js
 ├─ phpunit.xml
-└─ OPTIMIZATION-REPORT.md        (catatan proyek eksisting)
+├─ .github/
+│  └─ workflows/
+│     └─ ci.yml                  (matrix PHP 8.3 + 8.4, PG 16 service, parallel test, Pint lint)
+└─ OPTIMIZATION-REPORT.md        (catatan perubahan + status item)
 ```
 
 ---
@@ -293,6 +312,7 @@ project-blog/
 ## Services
 - `app/Services/GeminiService.php` — `generatePost(topic, language='id')`: call Google Gemini `generateContent` endpoint, parse JSON response, return `['title','excerpt','body']`. Throws `RuntimeException`. **Service**
 - `Mews\Purifier\Facades\Purifier` (package `mews/purifier`) — dipakai di Admin/Author PostController dan AiPostController untuk `Purifier::clean($body, 'blog')` sebelum simpan ke DB. Preset `blog` didefinisikan di `config/purifier.php`. **External Library**
+- `Sentry\Laravel\Integration` (package `sentry/sentry-laravel`) — register exception handler di `bootstrap/app.php` via `Integration::handles($exceptions)`. Aktif kalau env `SENTRY_LARAVEL_DSN` di-set; kosong = no-op silently (aman untuk local dev). **External Library**
 
 ## Traits
 - `app/Traits/GeneratesUniqueSlug.php` — `generateUniqueSlug(title, modelClass, excludeId=null)`: loop increment hingga slug unik. Dipakai oleh Admin\PostController, Author\PostController, Admin\AiPostController. **Helper/Trait**
@@ -390,8 +410,10 @@ Comment ──self_ref── Comment (parent_id, cascade)
 
 ## Migration / Seed / Factory
 - Migrations: `database/migrations/*.php` (13 file)
-- Seeder: `database/seeders/DatabaseSeeder.php` — membuat 4 users (admin, 2 author, 1 reader), 6 categories, 20 tags, 9 sample posts (lengkap dengan body HTML), random comments (approved + pending), 3 settings (site_name, site_description, site_email).
-- Factory: hanya `database/factories/UserFactory.php` (standar Breeze).
+- Seeders:
+  - `database/seeders/DatabaseSeeder.php` — **dev only**, membuat 4 users (admin, 2 author, 1 reader) dengan password `password`, plus 6 categories, 20 tags, 9 sample posts, comments. Jangan pernah jalankan di production.
+  - `database/seeders/ProductionSeeder.php` — **production-safe**, hanya bootstrap data referensi (categories, tags, settings) tanpa user dummy. Idempotent (`firstOrCreate`).
+- Factories: `database/factories/{User,Post,Category,Tag,Comment,Media}Factory.php` (6 file). Post factory punya state methods: `published()`, `pending()`, `rejected()`, `featured()`. Comment factory punya `guest()`, `pending()`.
 
 ## Runtime Artifacts
 - `storage/app/private` — disk `local` (serve=true)

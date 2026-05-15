@@ -6,7 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Media;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
-use Illuminate\Support\Facades\Str;
+use Illuminate\Support\Str;
 
 /**
  * Tujuan: Media library per-user untuk author (hanya lihat/upload/hapus milik sendiri).

@@ -6,6 +6,7 @@
 **Eksekusi Bundle Quick-Win #2:** 2026-05-12 (#7, #10, #13, #15 selesai + runtime verified)
 **Eksekusi #8:** 2026-05-15 (Admin Dashboard query consolidation, runtime verified)
 **Eksekusi Pre-Launch:** 2026-05-15 (custom error pages + newsletter cleanup, runtime verified)
+**Eksekusi Skenario B:** 2026-05-15 (Phase 1 hardening, Sentry, 68 tests, GitHub Actions CI)
 **Project:** ModernBlog / AndBlog (Laravel 13 + Vite + Tailwind + Alpine.js + PostgreSQL)
 
 ---
@@ -423,95 +424,65 @@ Ganti class manual `.prose` dengan `prose prose-lg dark:prose-invert` dari plugi
 
 ---
 
-### 22. Zero Business Logic Tests — ✅ VALID
+### 22. Zero Business Logic Tests — 🟢 FIXED (2026-05-15)
 
-**Status 2026-05-12:** `tests/Feature` hanya berisi test bawaan Breeze (Auth, ProfileTest, ExampleTest). Tidak ada test untuk: Post CRUD (Admin/Author), Comment moderation, Media upload, Policy, GeminiService, trait `GeneratesUniqueSlug`.
+**Eksekusi:**
 
-**Solusi:** Tambahkan suite test minimal + factories yang belum ada:
+1. **Setup PG test environment**:
+   - `phpunit.xml` di-update: `DB_CONNECTION=pgsql`, `DB_DATABASE=blog_test`, plus env var Sentry kosong agar no-op di test
+   - Buat database `blog_test` di PostgreSQL local
+   - Semua migration jalan termasuk PG-specific `update_posts_add_pending_rejected_status` (CHECK constraint)
 
-```
-tests/
-├── Feature/
-│   ├── Admin/
-│   │   ├── PostControllerTest.php
-│   │   ├── CategoryControllerTest.php
-│   │   ├── CommentControllerTest.php
-│   │   ├── MediaControllerTest.php
-│   │   └── UserControllerTest.php       # sekalian tangkap regression bug #1
-│   ├── Author/
-│   │   └── PostControllerTest.php
-│   ├── PostControllerTest.php           # Public blog
-│   └── CommentControllerTest.php
-├── Unit/
-│   ├── Models/
-│   │   ├── PostTest.php                 # Scopes, accessors
-│   │   └── UserTest.php                 # isAdmin/isAuthor
-│   ├── Traits/
-│   │   └── GeneratesUniqueSlugTest.php
-│   └── Policies/
-│       └── PostPolicyTest.php
+2. **Buat 5 factory baru** + tambah `HasFactory` trait di model Media:
+   - `PostFactory` dengan state methods: `published()`, `pending()`, `rejected()`, `featured()`
+   - `CategoryFactory`, `TagFactory`
+   - `CommentFactory` dengan state `guest()`, `pending()`
+   - `MediaFactory`
 
-database/factories/
-├── PostFactory.php
-├── CategoryFactory.php
-├── TagFactory.php
-├── CommentFactory.php
-└── MediaFactory.php
-```
+3. **Tulis 31 test baru** (5 file Feature + 1 file Unit):
 
-Catatan: test DB perlu pakai SQLite in-memory atau PostgreSQL test DB. Karena migration `2024_01_02_000001` pakai raw PG SQL, **SQLite tidak bisa**. Solusi: test DB pakai PostgreSQL terpisah.
+| File | Test | Coverage |
+|------|------|----------|
+| `tests/Feature/Admin/UserControllerTest.php` | 4 | Regression bug #1 (password tidak double-hash, login berfungsi) |
+| `tests/Feature/Admin/PostControllerTest.php` | 7 | Regression #2 (XSS sanitize), #4 (path traversal), workflow approve/reject |
+| `tests/Feature/Author/PostControllerTest.php` | 7 | Ownership policy + Purifier + media ownership scoping |
+| `tests/Feature/Admin/MediaControllerTest.php` | 4 | Regression #3 (SVG rejected) |
+| `tests/Feature/PublicPostTest.php` | 9 | Smoke test public endpoints + N+1 query budget assertion + security headers |
+| `tests/Unit/PurifierBlogPresetTest.php` | 12 | 12 attack vectors per-isolated (script, event handler, javascript:, data:, iframe, style, object, embed, form, dll.) |
+
+**Test result final:** ✅ **68 passed (166 assertions) — 5.80s**
+
+**Bonus**: testing investasi langsung membayar. Test ini menemukan bug existing yang tidak pernah ketahuan:
+- `Str` facade salah import (`Illuminate\Support\Facades\Str` tidak ada — pindahkan ke `Illuminate\Support\Str`) di `Admin/MediaController` dan `Author/MediaController`. Akan crash production saat upload media. **Sudah di-fix.**
+- 3 test Breeze bawaan refer route `dashboard` yang tidak ada di project ini (custom redirect ke `home`/`admin.dashboard`). Akan terus fail di CI sampai di-fix. **Sudah di-fix** ke `home`.
 
 ---
 
-### 23. Tidak Ada Docker/CI-CD — ✅ VALID
+### 23. Tidak Ada Docker/CI-CD — 🟢 FIXED (2026-05-15)
 
-**Status 2026-05-12:** Tidak ada `.github/`, `Dockerfile`, atau `docker-compose.yml`.
+**File baru:** `.github/workflows/ci.yml`
 
-**Solusi minimal GitHub Actions (perlu adjustment karena PG-only):**
+**Eksekusi:** GitHub Actions workflow dengan 2 job:
 
-```yaml
-# .github/workflows/ci.yml
-name: CI
-on: [push, pull_request]
-jobs:
-  test:
-    runs-on: ubuntu-latest
-    services:
-      postgres:
-        image: postgres:16
-        env:
-          POSTGRES_PASSWORD: postgres
-          POSTGRES_DB: blog_test
-        ports: ['5432:5432']
-        options: >-
-          --health-cmd pg_isready
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
-    steps:
-      - uses: actions/checkout@v4
-      - uses: shivammathur/setup-php@v2
-        with:
-          php-version: '8.3'
-          extensions: pgsql, pdo_pgsql
-      - run: composer install --no-interaction --prefer-dist
-      - run: cp .env.example .env && php artisan key:generate
-      - run: php artisan migrate --force
-        env:
-          DB_CONNECTION: pgsql
-          DB_HOST: 127.0.0.1
-          DB_PORT: 5432
-          DB_DATABASE: blog_test
-          DB_USERNAME: postgres
-          DB_PASSWORD: postgres
-      - run: php artisan test
-```
+1. **Test job** (matrix PHP 8.3 + 8.4):
+   - PostgreSQL 16 sebagai service (matches production target)
+   - Cache Composer + npm packages
+   - `composer validate --strict`
+   - Install dep + build assets via Vite
+   - `php artisan migrate --force`
+   - `php artisan test --parallel --processes=2`
+
+2. **Lint job**: `vendor/bin/pint --test` (no auto-fix di CI, hanya verifikasi)
+
+**Trigger:** push ke `main`/`master` + PR ke branch tersebut.
+
+**Catatan:** Docker / Dockerfile tidak dibuat — proyek ini di-deploy via Forge/Envoyer/manual VPS, bukan container. Bisa ditambah jika nanti ada kebutuhan.
 
 ---
 
 ## Ringkasan Revisi — Status Semua Item
 
-| #  | Item                                              | Status 2026-05-12 |
+| #  | Item                                              | Status 2026-05-15 |
 | -- | ------------------------------------------------- | ----------------- |
 | 1  | Password double-hashing                            | 🟢 FIXED          |
 | 2  | XSS HTML post body                                 | 🟢 FIXED          |
@@ -534,10 +505,19 @@ jobs:
 | 19 | Newsletter form non-fungsional                     | 🟢 FIXED          |
 | 20 | Duplicate font loading                             | 🟢 FIXED          |
 | 21 | Manual `.prose` styles                             | ✅ VALID           |
-| 22 | Zero business logic tests                          | ✅ VALID           |
-| 23 | Tidak ada Docker/CI-CD                             | ✅ VALID           |
+| 22 | Zero business logic tests                          | 🟢 FIXED          |
+| 23 | Tidak ada Docker/CI-CD                             | 🟢 FIXED          |
 
-**Ringkasan angka:** 11 FIXED ✅ (semua CRITICAL + 6 quick-win), 5 VALID belum dieksekusi, 6 PARTIAL, 1 OBSOLETE.
+**Plus item baru di luar laporan asli (Skenario B 2026-05-15):**
+- Rate-limit `POST /admin/ai-posts/generate` (`throttle:5,10`) — cost protection Gemini API
+- `LOG_CHANNEL=stack` + `LOG_STACK=daily` + `LOG_DAILY_DAYS=14` — log rotation
+- Default post image SVG placeholder (`public/images/post-default.svg`) — hapus hardcoded Unsplash URL
+- `ProductionSeeder` — seeder aman untuk production tanpa user dummy
+- Sentry error monitoring integrated (siap pakai, tinggal isi `SENTRY_LARAVEL_DSN`)
+- Logo brand custom + favicon dengan cache-busting
+- Bug fix existing yang ditemukan oleh tests: `Str` facade import keliru di Admin/Author MediaController
+
+**Ringkasan angka:** 13 FIXED ✅ (semua CRITICAL + 8 medium/low), 3 VALID belum dieksekusi, 6 PARTIAL, 1 OBSOLETE.
 
 ---
 
@@ -560,14 +540,72 @@ jobs:
 | 13 | Deduplikasi font loading (Inter 2x)                      | LOW Performance      | 10 menit  | 🟢 Done |
 | 14 | Ganti manual `.prose` dengan `@tailwindcss/typography`   | LOW Quality          | 30 menit  | ⏳      |
 | 15 | Update `.env.example` ke `DB_CONNECTION=pgsql` + README  | LOW Documentation    | 10 menit  | 🟢 Done |
-| 16 | Tulis feature tests untuk core business logic            | MEDIUM Quality       | 4-6 jam   | ⏳      |
-| 17 | Setup GitHub Actions CI dengan PG service                | MEDIUM Quality       | 30 menit  | ⏳      |
+| 16 | Tulis feature tests untuk core business logic            | MEDIUM Quality       | 4-6 jam   | 🟢 Done |
+| 17 | Setup GitHub Actions CI dengan PG service                | MEDIUM Quality       | 30 menit  | 🟢 Done |
 
-**Progress:** 11/17 done. Sisa butuh kerja lebih besar (#12 Form Requests, #16 Tests) atau butuh keputusan desain (#11 cache invalidation strategy).
+**Progress:** 13/17 done. Sisa 4 item:
+- #9 missing indexes (15 min) — low impact sampai data >10k rows
+- #11 cache homepage/sitemap (45 min) — butuh strategi invalidation
+- #12 Form Requests + Services (2-3 jam) — refactor besar (sekarang aman karena ada test coverage)
+- #14 `@tailwindcss/typography` (30 min) — nice-to-have
 
 ---
 
 ## Eksekusi Log
+
+### 2026-05-15 — Skenario B (Solid Infrastructure)
+
+**Phase 1: Code hardening patches** (~30 menit)
+- `routes/web.php` — `throttle:5,10` di `POST /admin/ai-posts/generate` (cost protection Gemini)
+- `.env.example` + `.env` — `LOG_CHANNEL=stack` + `LOG_STACK=daily` + `LOG_DAILY_DAYS=14`
+- `app/Models/Post.php` — `getFeaturedImageUrlAttribute` fallback ke local SVG (drop hardcoded Unsplash URL)
+- `public/images/post-default.svg` — **baru**, gradient brand placeholder
+- `database/seeders/ProductionSeeder.php` — **baru**, seeder aman tanpa user dummy
+- `README.md` — section "Production Deployment" dengan checklist + warning seeder
+
+**Phase 2: Sentry error monitoring** (~1 jam)
+- `composer require sentry/sentry-laravel` (4.25.1 + ezyang/htmlpurifier deps)
+- `bootstrap/app.php` — `Integration::handles($exceptions)` di withExceptions
+- `.env.example` — `SENTRY_LARAVEL_DSN` (default empty = no-op silently di local)
+- `README.md` — section "Error Monitoring (Sentry)" dengan instruksi signup + DSN
+- Verified: `php artisan route:list` boot tanpa error
+
+**Phase 3: Tests** (~4 jam total)
+
+3a — Setup PG test DB:
+- `phpunit.xml` — switch dari SQLite in-memory ke PG (`DB_DATABASE=blog_test`)
+- `createdb blog_test` di PostgreSQL local
+- Verified: semua 11 migration jalan termasuk PG-specific CHECK constraint
+
+3b — Factories baru (5 file):
+- `database/factories/{Post,Category,Tag,Comment,Media}Factory.php`
+- Plus tambah `HasFactory` trait di `App\Models\Media`
+- Smoke test: `Post::factory()->published()->featured()->create()` works end-to-end
+
+3c — Feature tests (5 file, 31 test):
+- `tests/Feature/Admin/UserControllerTest.php` (4 test) — regression bug #1
+- `tests/Feature/Admin/PostControllerTest.php` (7 test) — regression #2 + #4 + workflow
+- `tests/Feature/Author/PostControllerTest.php` (7 test) — ownership + Purifier + media scoping
+- `tests/Feature/Admin/MediaControllerTest.php` (4 test) — regression #3 SVG
+- `tests/Feature/PublicPostTest.php` (9 test) — smoke + N+1 budget + security headers
+
+3d — Unit tests (1 file, 12 test):
+- `tests/Unit/PurifierBlogPresetTest.php` — 12 attack vectors per-isolated
+
+**Bug existing yang ditemukan tests:**
+- `App\Http\Controllers\Admin\MediaController` & `Author\MediaController` import `Str` salah:
+  `use Illuminate\Support\Facades\Str;` → tidak ada class itu. Fix: pindah ke `use Illuminate\Support\Str;`.
+  Akan crash di production saat upload media.
+- 3 test Breeze bawaan refer route `dashboard` yang tidak ada (custom redirect ke `home`/`admin.dashboard`).
+  Fix: ganti `route('dashboard')` → `route('home')`.
+
+**Phase 4: GitHub Actions CI**
+- `.github/workflows/ci.yml` — **baru**, 2 job:
+  - `test`: matrix PHP 8.3 + 8.4, PG 16 service, composer + npm cache, migrate + parallel test
+  - `lint`: `vendor/bin/pint --test` (verifikasi code style tanpa auto-fix)
+- Trigger: push + PR ke main/master
+
+**Final state:** ✅ **68 passed (166 assertions) — 5.80s** (local PG). CI pipeline siap run di GitHub.
 
 ### 2026-05-15 — Pre-Launch Checklist: Custom Error Pages + Newsletter Cleanup
 

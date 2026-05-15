@@ -89,7 +89,9 @@ Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(fun
 
     // AI Post Generator
     Route::get('ai-posts/create', [Admin\AiPostController::class, 'create'])->name('ai-posts.create');
-    Route::post('ai-posts/generate', [Admin\AiPostController::class, 'generate'])->name('ai-posts.generate');
+    Route::post('ai-posts/generate', [Admin\AiPostController::class, 'generate'])
+        ->middleware('throttle:5,10')
+        ->name('ai-posts.generate');
     Route::post('ai-posts', [Admin\AiPostController::class, 'store'])->name('ai-posts.store');
 
     // Media

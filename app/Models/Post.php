@@ -137,7 +137,7 @@ class Post extends Model
             return asset('storage/'.$this->featured_image);
         }
 
-        return 'https://images.unsplash.com/photo-1499750310107-5fef28a66643?w=800&h=400&fit=crop';
+        return asset('images/post-default.svg');
     }
 
     public function getReadingTimeAttribute(): int
