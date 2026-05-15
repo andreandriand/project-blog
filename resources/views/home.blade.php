@@ -159,21 +159,4 @@
         </div>
     </section>
     @endif
-
-    {{-- Newsletter CTA --}}
-    <section class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
-        <div class="bg-gradient-to-r from-primary-600 to-purple-600 rounded-3xl p-8 md:p-12 text-center relative overflow-hidden">
-            <div class="absolute inset-0 bg-grid-white/10"></div>
-            <div class="relative">
-                <h2 class="text-2xl md:text-3xl font-bold text-white mb-3">{{ __('Jangan Lewatkan Update Terbaru') }}</h2>
-                <p class="text-white/80 max-w-xl mx-auto mb-6">{{ __('Dapatkan notifikasi setiap ada artikel baru. Gratis dan tanpa spam!') }}</p>
-                <div class="flex flex-col sm:flex-row gap-3 max-w-md mx-auto">
-                    <input type="email" placeholder="{{ __('Masukkan email Anda') }}" class="flex-1 px-4 py-3 rounded-xl border-0 focus:ring-2 focus:ring-white/50 bg-white/20 text-white placeholder-white/60 backdrop-blur-sm">
-                    <button class="px-6 py-3 bg-white text-primary-700 font-semibold rounded-xl hover:bg-gray-100 transition-colors shadow-lg">
-                        {{ __('Berlangganan') }}
-                    </button>
-                </div>
-            </div>
-        </div>
-    </section>
 @endsection

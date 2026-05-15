@@ -4,6 +4,8 @@
 **Direvisi:** 2026-05-12 (verifikasi ulang terhadap kode aktual)
 **Eksekusi CRITICAL:** 2026-05-12 (5/5 CRITICAL selesai + build verified)
 **Eksekusi Bundle Quick-Win #2:** 2026-05-12 (#7, #10, #13, #15 selesai + runtime verified)
+**Eksekusi #8:** 2026-05-15 (Admin Dashboard query consolidation, runtime verified)
+**Eksekusi Pre-Launch:** 2026-05-15 (custom error pages + newsletter cleanup, runtime verified)
 **Project:** ModernBlog / AndBlog (Laravel 13 + Vite + Tailwind + Alpine.js + PostgreSQL)
 
 ---
@@ -148,39 +150,22 @@ Rules validasi post di-copy-paste di:
 
 ---
 
-### 9. Admin Dashboard: 6 Query Terpisah — ✅ VALID
+### 9. Admin Dashboard: 6 Query Terpisah — 🟢 FIXED (2026-05-15)
 
-**File:** `app/Http/Controllers/Admin/DashboardController.php` (lines 14-21)
+**File:** `app/Http/Controllers/Admin/DashboardController.php`
 
-Masih 6 query agregasi terpisah.
+**Eksekusi:** Refactor `index()` — agregasi posts dan comments di-konsolidasi jadi 1 query masing-masing pakai sintaks PostgreSQL `COUNT(*) FILTER (WHERE ...)`. Hasil array `$stats` tetap punya 6 key yang sama persis (zero perubahan view).
 
-**Status 2026-05-12:** Valid. **Catatan positif:** `Author/DashboardController` justru **sudah** memakai pola `selectRaw` conditional aggregation. Tinggal menyamakan pola ke sisi admin.
+**Sebelum:** 6 query agregasi terpisah (`Post::count`, `Post::where(status)->count`, `Comment::count`, `Comment::where(is_approved)->count`, `Post::sum(views_count)`, `User::count`).
 
-**Solusi (PostgreSQL-ready):**
+**Sesudah:** 2 query agregasi konsolidasi + 1 `User::count`. Total 5 query (recent posts/comments tidak berubah).
 
-```php
-$postStats = Post::selectRaw("
-    COUNT(*) AS total_posts,
-    COUNT(*) FILTER (WHERE status = 'published') AS published_posts,
-    COALESCE(SUM(views_count), 0) AS total_views
-")->first();
+**Verifikasi:**
+- `php -l` clean
+- Runtime test (script standalone): postStats + commentStats menghasilkan 3 queries total, value benar (11 posts/10 published/10893 views/21 comments/5 pending)
+- Live HTTP GET ke `/admin` (login admin@blog.com): status 200, view render normal dengan stats numbers
 
-$commentStats = Comment::selectRaw("
-    COUNT(*) AS total_comments,
-    COUNT(*) FILTER (WHERE is_approved = false) AS pending_comments
-")->first();
-
-$stats = [
-    'total_posts'      => $postStats->total_posts,
-    'published_posts'  => $postStats->published_posts,
-    'total_views'      => $postStats->total_views,
-    'total_comments'   => $commentStats->total_comments,
-    'pending_comments' => $commentStats->pending_comments,
-    'total_users'      => User::count(),
-];
-```
-
-Catatan: `COUNT(*) FILTER (WHERE ...)` adalah sintaks PostgreSQL yang lebih ringkas dari `SUM(CASE WHEN ...)`. Pakai `SUM(CASE ...)` jika butuh kompatibel cross-DB.
+Cast `(int)` ditambahkan pada hasil agregasi karena PG returns `BIGINT` yang otomatis jadi string di PHP — `number_format()` di view butuh int.
 
 ---
 
@@ -385,13 +370,17 @@ Pertimbangan: untuk tabel yang masih kecil (seeder cuma ~9 posts), penambahan in
 
 ## LOW — Code Quality
 
-### 19. Newsletter Form Non-Fungsional — ✅ VALID
+### 19. Newsletter Form Non-Fungsional — 🟢 FIXED (2026-05-15)
 
-**File:** `resources/views/home.blade.php` (line 163-178)
+**File:** `resources/views/home.blade.php`
 
-**Status 2026-05-12:** Masih `<input>` + `<button>` **tanpa** `<form>` wrapper, tanpa action, tanpa handler backend. Menyesatkan user.
+**Eksekusi:** Section newsletter (~16 baris HTML, line 163-178 lama) dihapus. Form sebelumnya tidak punya `<form>` wrapper, tidak punya action, tidak punya backend handler — menyesatkan user yang isi email karena email tidak pernah disimpan/dikirim.
 
-**Solusi:** Hapus section atau implementasikan (butuh tabel `newsletter_subscribers`, controller, validasi email, double-opt-in kalau serius).
+**Verifikasi runtime:** Live HTTP `GET /` — string "Subscribe", "email" input, dan "Get notified" tidak ditemukan di response. Section "Categories" dan "Latest Articles" tetap normal.
+
+**Bonus:** CSS bundle turun dari 76.99 kB → 65.81 kB (−11 kB) karena Tailwind tree-shake utility classes yang sebelumnya hanya dipakai di section newsletter (`bg-white/20`, `placeholder-white/60`, dll).
+
+**Kalau nanti newsletter dibutuhkan:** implementasi ulang butuh tabel `newsletter_subscribers`, `NewsletterController@subscribe`, validasi unique email, double-opt-in via mail (token confirmation), dan integrasi ke provider real (Mailchimp / SendGrid Marketing / Resend Audiences). Skip dulu sampai ada strategi product yang konkret.
 
 ---
 
@@ -532,7 +521,7 @@ jobs:
 | 6  | Duplikasi Admin vs Author controller               | ✅ VALID           |
 | 7  | Validasi post duplikasi 5x                         | ✅ VALID           |
 | 8  | N+1 comment replies                                | 🟢 FIXED          |
-| 9  | Admin dashboard 6 query                            | ✅ VALID           |
+| 9  | Admin dashboard 6 query                            | 🟢 FIXED          |
 | 10 | `Setting::get()` tanpa cache                       | ❌ OBSOLETE        |
 | 11 | Slug uniqueness loop                               | ✅ VALID (low impact) |
 | 12 | Homepage & sitemap tanpa cache                     | ✅ VALID           |
@@ -542,13 +531,13 @@ jobs:
 | 16 | `APP_DEBUG=true`                                   | ⚠️ PARTIAL (local OK) |
 | 17 | Migration PostgreSQL-specific (docs)               | 🟢 FIXED          |
 | 18 | Missing indexes                                    | ⚠️ PARTIAL (4 dari 8 sudah ada) |
-| 19 | Newsletter form non-fungsional                     | ✅ VALID           |
+| 19 | Newsletter form non-fungsional                     | 🟢 FIXED          |
 | 20 | Duplicate font loading                             | 🟢 FIXED          |
 | 21 | Manual `.prose` styles                             | ✅ VALID           |
 | 22 | Zero business logic tests                          | ✅ VALID           |
 | 23 | Tidak ada Docker/CI-CD                             | ✅ VALID           |
 
-**Ringkasan angka:** 9 FIXED ✅ (semua CRITICAL + 4 quick-win), 7 VALID belum dieksekusi, 6 PARTIAL, 1 OBSOLETE.
+**Ringkasan angka:** 11 FIXED ✅ (semua CRITICAL + 6 quick-win), 5 VALID belum dieksekusi, 6 PARTIAL, 1 OBSOLETE.
 
 ---
 
@@ -561,9 +550,9 @@ jobs:
 | 3  | Hapus SVG dari allowed upload types                      | CRITICAL Security    | 5 menit   | 🟢 Done |
 | 4  | Validasi `featured_image_path`                           | CRITICAL Security    | 15 menit  | 🟢 Done |
 | 5  | Hapus `@tailwindcss/vite` dari `package.json`            | CRITICAL Build       | 5 menit   | 🟢 Done |
-| 6  | Hapus / implementasikan newsletter form                  | LOW UX               | 5 menit   | ⏳      |
+| 6  | Hapus / implementasikan newsletter form                  | LOW UX               | 5 menit   | 🟢 Done |
 | 7  | Fix N+1 queries — eager load `replies.user`              | MEDIUM Performance   | 5 menit   | 🟢 Done |
-| 8  | Konsolidasi query Admin Dashboard                        | MEDIUM Performance   | 15 menit  | ⏳      |
+| 8  | Konsolidasi query Admin Dashboard                        | MEDIUM Performance   | 15 menit  | 🟢 Done |
 | 9  | Tambah index yang masih missing                          | MEDIUM Performance   | 15 menit  | ⏳      |
 | 10 | Tambah security headers middleware                       | MEDIUM Security      | 20 menit  | 🟢 Done |
 | 11 | `Cache::remember` untuk homepage & sitemap               | MEDIUM Performance   | 45 menit  | ⏳      |
@@ -574,11 +563,45 @@ jobs:
 | 16 | Tulis feature tests untuk core business logic            | MEDIUM Quality       | 4-6 jam   | ⏳      |
 | 17 | Setup GitHub Actions CI dengan PG service                | MEDIUM Quality       | 30 menit  | ⏳      |
 
-**Progress:** 9/17 done. Quick-wins habis — sisa butuh kerja lebih besar (#12 Form Requests, #16 Tests) atau butuh keputusan desain (#6 newsletter, #11 cache invalidation strategy).
+**Progress:** 11/17 done. Sisa butuh kerja lebih besar (#12 Form Requests, #16 Tests) atau butuh keputusan desain (#11 cache invalidation strategy).
 
 ---
 
 ## Eksekusi Log
+
+### 2026-05-15 — Pre-Launch Checklist: Custom Error Pages + Newsletter Cleanup
+
+Files yang ditambah/diubah:
+- `resources/views/errors/layout.blade.php` — **baru**, shared layout untuk semua error page (gradient brand, dark mode, Bunny Fonts Inter, `<meta name="robots" content="noindex,nofollow">`)
+- `resources/views/errors/404.blade.php` — **baru**, "Halaman Tidak Ditemukan"
+- `resources/views/errors/403.blade.php` — **baru**, "Akses Ditolak"
+- `resources/views/errors/419.blade.php` — **baru**, "Sesi Kedaluwarsa" (CSRF token expired)
+- `resources/views/errors/429.blade.php` — **baru**, "Terlalu Banyak Permintaan" (throttled)
+- `resources/views/errors/500.blade.php` — **baru**, "Server Bermasalah"
+- `resources/views/errors/503.blade.php` — **baru**, "Sedang Pemeliharaan" (mendukung pesan custom dari `php artisan down --message="..."`)
+- `resources/views/home.blade.php` — newsletter section dihapus (item #19)
+
+Verifikasi:
+- `npx vite build` sukses (55 modules, 1.00s, CSS turun ke 65.81 kB)
+- Live HTTP `GET /blog/non-existent-slug-xxx`: status 404, halaman render brand layout dengan "404", "Halaman Tidak Ditemukan", `<meta name="robots" content="noindex,nofollow">`
+- Live HTTP `GET /`: status 200, newsletter strings tidak ditemukan, section Categories + Latest Articles intact
+
+Catatan implementasi:
+- Layout shared via `@include` (bukan `@extends`) karena 6 page tinggal pass `$code`/`$title`/`$description` via `compact()` — lebih ringkas dari section-yield pattern.
+- 404 + 403 + 419 + 429 = client error, tone "petunjuk netral".
+- 500 = system fault, tone "kami sedang menangani".
+- 503 ambil pesan custom dari `$exception?->getMessage()` agar `php artisan down --message="..."` bisa tampil custom.
+- Action buttons: "Beranda" (gradient primary) + "Halaman Sebelumnya" (secondary, fallback ke beranda kalau no referrer).
+
+### 2026-05-15 — #8 Admin Dashboard query consolidation
+
+File yang diubah:
+- `app/Http/Controllers/Admin/DashboardController.php` — agregasi posts + comments dikonsolidasi via `COUNT(*) FILTER (WHERE ...)` (PG-native), header doc ditambah
+
+Verifikasi:
+- `php -l` clean
+- Runtime test: 3 query untuk agregasi (sebelumnya 6), value identik
+- Live HTTP `GET /admin` (login admin): status 200, dashboard render normal
 
 ### 2026-05-12 — Bundle Quick-Win #2 (#7, #10, #13, #15)
 

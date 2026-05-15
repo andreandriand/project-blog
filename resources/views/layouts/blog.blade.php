@@ -9,6 +9,8 @@
 
     <title>@yield('title', config('app.name', 'ModernBlog'))</title>
 
+    @include('partials.favicon')
+
     @hasSection('seo')
         @yield('seo')
     @else
@@ -32,16 +34,10 @@
                 {{-- Logo --}}
                 <div class="flex items-center">
                     <a href="{{ route('home') }}" class="flex items-center space-x-2">
-                        <div
-                            class="w-8 h-8 bg-gradient-to-br from-primary-500 to-purple-600 rounded-lg flex items-center justify-center">
-                            <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                    d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
-                            </svg>
-                        </div>
+                        <img src="{{ asset('images/logo.webp') }}" alt="{{ config('app.name', 'AndBlog') }}" class="h-9 w-auto">
                         <span
                             class="text-xl font-bold bg-gradient-to-r from-primary-600 to-purple-600 bg-clip-text text-transparent">
-                            {{ config('app.name', 'ModernBlog') }}
+                            {{ config('app.name', 'AndBlog') }}
                         </span>
                     </a>
                 </div>
@@ -197,14 +193,7 @@
                 {{-- Brand --}}
                 <div class="md:col-span-2">
                     <a href="{{ route('home') }}" class="flex items-center space-x-2 mb-4">
-                        <div
-                            class="w-8 h-8 bg-gradient-to-br from-primary-500 to-purple-600 rounded-lg flex items-center justify-center">
-                            <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor"
-                                viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                    d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
-                            </svg>
-                        </div>
+                        <img src="{{ asset('images/logo.webp') }}" alt="{{ config('app.name') }}" class="h-9 w-auto">
                         <span
                             class="text-xl font-bold bg-gradient-to-r from-primary-600 to-purple-600 bg-clip-text text-transparent">{{ config('app.name') }}</span>
                     </a>
