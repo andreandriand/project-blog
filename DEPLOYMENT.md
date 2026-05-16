@@ -982,12 +982,12 @@ sudo systemctl enable --now postgresql
 
 # Buat database (sama dengan section VPS Ubuntu 1.3)
 sudo -u postgres psql <<EOF
-CREATE DATABASE andblog;
-CREATE USER andreandrian WITH PASSWORD 'W3lc0m3t0My@ndv3rse!&';
-GRANT ALL PRIVILEGES ON DATABASE blog_laravel TO andblog;
-ALTER DATABASE blog_laravel OWNER TO andblog;
+CREATE DATABASE blog_laravel;
+CREATE USER username WITH PASSWORD 'strong-password';
+GRANT ALL PRIVILEGES ON DATABASE blog_laravel TO username;
+ALTER DATABASE blog_laravel OWNER TO username;
 \c blog_laravel
-GRANT ALL ON SCHEMA public TO andblog;
+GRANT ALL ON SCHEMA public TO username;
 EOF
 ```
 
