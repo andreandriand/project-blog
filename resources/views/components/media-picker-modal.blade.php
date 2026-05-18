@@ -13,6 +13,7 @@
     pickedUrl: '',
 
     openPicker(detail) {
+        if (document.querySelector('form[data-submitting]')) return;
         this.target = detail.target;
         this.apiUrl = detail.apiUrl;
         this.pickedId = null;

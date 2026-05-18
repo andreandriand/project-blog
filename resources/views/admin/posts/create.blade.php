@@ -3,7 +3,7 @@
 @section('page-title', 'Tulis Artikel Baru')
 
 @section('content')
-    <form action="{{ route('admin.posts.store') }}" method="POST" enctype="multipart/form-data">
+    <form action="{{ route('admin.posts.store') }}" method="POST" enctype="multipart/form-data" @submit="$el.setAttribute('data-submitting', '')">
         @csrf
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
             {{-- Main Content --}}

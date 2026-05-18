@@ -3,7 +3,7 @@
 @section('page-title', 'Edit Artikel')
 
 @section('content')
-    <form action="{{ route('admin.posts.update', $post) }}" method="POST" enctype="multipart/form-data">
+    <form action="{{ route('admin.posts.update', $post) }}" method="POST" enctype="multipart/form-data" @submit="$el.setAttribute('data-submitting', '')">
         @csrf @method('PUT')
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
             <div class="lg:col-span-2 space-y-6">
