@@ -7,27 +7,34 @@ Peta navigasi proyek blog Laravel dengan fitur multi-role (admin/author/reader),
 # Project Summary
 
 ## Tujuan Aplikasi
-Platform blog modern (disebut "ModernBlog" di seeder) dengan:
+Platform blog modern (disebut "AndBlog") dengan:
 - Artikel berlabel status workflow (draft → pending → published/rejected)
+- WYSIWYG editor (TinyMCE) terintegrasi media library (gallery + direct upload)
 - Sistem komentar bersarang (nested) dengan moderasi
 - Multi-role: `admin`, `author`, `reader`
-- Media library terpusat dengan picker modal
+- Media library terpusat dengan picker modal (tab Gallery + Upload)
 - AI-generated posts via **Google Gemini API**
-- SEO: sitemap.xml, robots.txt, meta tags
+- SEO: sitemap.xml, robots.txt, meta tags (OG, Twitter Card, JSON-LD)
+- Custom error pages (404/403/419/429/500/503) dengan brand identity
 - Bilingual (ID / EN) via session switcher
+- Error monitoring via Sentry
+- Email production via Resend
 
 ## Tech Stack Utama
-- **PHP**: `^8.3`
+- **PHP**: `^8.4` (minimum 8.4 karena dependency lock symfony/console v8, symfony/var-dumper v8)
 - **Laravel**: `^13.0`
-- **Database**: Konfigurasi `pgsql` tersedia; default `.env.example` menggunakan `sqlite`. Migration `2024_01_02_000001_update_posts_add_pending_rejected_status.php` memakai **raw SQL PostgreSQL** (`ALTER TABLE ... CHECK CONSTRAINT`). Artinya proyek **ditargetkan untuk PostgreSQL di production**.
+- **Database**: PostgreSQL (wajib). `.env.example` sudah default `DB_CONNECTION=pgsql`. Migration `2024_01_02_000001` memakai raw SQL PostgreSQL (`ALTER TABLE ... CHECK CONSTRAINT`).
 - **Auth**: Laravel Breeze `^2.4` (Blade stack)
 - **Frontend**: Blade + **Alpine.js 3** + **Tailwind CSS 3** (via `laravel-vite-plugin`). Font **Inter** di-load dari Bunny Fonts (GDPR-friendly, no tracking).
+- **WYSIWYG Editor**: TinyMCE 7 (self-hosted di `public/vendor/tinymce/`), terintegrasi dengan Media Library untuk insert image dari gallery atau direct upload.
 - **Queue**: `database` driver (tabel `jobs`)
 - **Cache**: `database` driver (tabel `cache`)
 - **Session**: `database` driver (tabel `sessions`)
-- **Mail**: `log` driver default (tidak aktif)
+- **Mail**: `resend` driver di production (package `resend/resend-laravel`), `log` driver di local dev
 - **Filesystem**: disk `public` untuk upload (posts, avatars, media)
 - **HTTP Client**: `Illuminate\Support\Facades\Http` (Gemini API)
+- **Error Monitoring**: Sentry (package `sentry/sentry-laravel`), no-op kalau `SENTRY_LARAVEL_DSN` kosong
+- **Log Rotation**: `daily` channel, retention 14 hari
 - **Dev tools**: Pail (log viewer), Pint, PHPUnit 12, Collision, Mockery
 
 ## Paket Composer Penting
@@ -35,9 +42,11 @@ Platform blog modern (disebut "ModernBlog" di seeder) dengan:
 - `laravel/breeze ^2.4` (dev)
 - `laravel/tinker ^3.0`
 - `laravel/pail ^1.2` (dev)
-- `mews/purifier ^3.4` — HTMLPurifier wrapper, dipakai untuk sanitasi HTML body post (anti Stored XSS)
+- `mews/purifier ^3.4` — HTMLPurifier wrapper, sanitasi HTML body post (anti Stored XSS)
 - `sentry/sentry-laravel ^4.25` — error monitoring (no-op kalau `SENTRY_LARAVEL_DSN` kosong)
+- `resend/resend-laravel ^1.4` — email transport via Resend API (production)
 - `fakerphp/faker` (dev)
+- **NPM**: `tinymce` (self-hosted WYSIWYG editor, di-copy ke `public/vendor/tinymce/`)
 - **Tidak ada**: Livewire, Inertia, Filament, Sanctum, Spatie Permission, Horizon. Akses role diimplementasi manual via kolom `users.role` + middleware.
 
 ## Pola Arsitektur
@@ -123,7 +132,7 @@ PATCH /admin/posts/{post}/reject
 ## 7. Admin - AI Post Generator (External API Flow)
 ```
 POST /admin/ai-posts/generate
-  -> auth + admin middleware
+  -> auth + admin middleware + throttle:5,10
   -> Admin\AiPostController@generate(GeminiService)
   -> Validate: topic max:500, language in:id,en
   -> GeminiService::generatePost(topic, language)
@@ -132,10 +141,12 @@ POST /admin/ai-posts/generate
       -> parse JSON (strip ```json fences), require title+excerpt+body
       -> throws RuntimeException on failure
   -> view('admin.posts.ai-generate', [generated, categories, tags])
+     -> Step 2: TinyMCE WYSIWYG editor untuk edit body + media-picker untuk featured image
 
 POST /admin/ai-posts
   -> Admin\AiPostController@store
-  -> Validate + Purifier::clean(body, 'blog') + generateUniqueSlug -> Post::create + tags sync
+  -> Validate + Purifier::clean(body, 'blog') + featured_image/featured_image_path + generateUniqueSlug
+  -> Post::create + tags sync
 ```
 
 ## 8. Media Upload (Admin/Author)
@@ -217,15 +228,19 @@ project-blog/
 ├─ lang/
 ├─ public/
 │  ├─ favicon.ico
-│  └─ images/
-│     ├─ logo.webp
-│     └─ post-default.svg        (fallback featured image, gradient brand)
+│  ├─ images/
+│  │  ├─ logo.webp
+│  │  └─ post-default.svg        (fallback featured image, gradient brand)
+│  └─ vendor/
+│     └─ tinymce/                (self-hosted TinyMCE WYSIWYG, di-copy dari node_modules saat deploy)
 ├─ resources/
 │  ├─ css/app.css
 │  ├─ js/{app.js, bootstrap.js}  (Alpine.js + axios)
 │  └─ views/
 │     ├─ layouts/                (app, guest, admin, author, blog, navigation)
-│     ├─ components/             (Breeze UI + media-picker, seo)
+│     ├─ components/             (Breeze UI + media-picker, media-picker-modal, seo)
+│     ├─ partials/               (favicon, tinymce)
+│     ├─ errors/                 (layout, 403, 404, 419, 429, 500, 503)
 │     ├─ auth/                   (login, register, forgot-password, reset-password, verify-email, confirm-password)
 │     ├─ pages/                  (about, contact — via Route::view)
 │     ├─ posts/                  (index, show, by-category, by-tag)
@@ -258,7 +273,8 @@ project-blog/
 ├─ .github/
 │  └─ workflows/
 │     └─ ci.yml                  (PHP 8.4, PG 16 service, parallel test, Pint lint)
-└─ OPTIMIZATION-REPORT.md        (catatan perubahan + status item)
+├─ OPTIMIZATION-REPORT.md        (catatan perubahan + status item)
+└─ DEPLOYMENT.md                 (panduan deploy VPS Ubuntu + Docker + aaPanel Armbian)
 ```
 
 ---
@@ -313,6 +329,7 @@ project-blog/
 - `app/Services/GeminiService.php` — `generatePost(topic, language='id')`: call Google Gemini `generateContent` endpoint, parse JSON response, return `['title','excerpt','body']`. Throws `RuntimeException`. **Service**
 - `Mews\Purifier\Facades\Purifier` (package `mews/purifier`) — dipakai di Admin/Author PostController dan AiPostController untuk `Purifier::clean($body, 'blog')` sebelum simpan ke DB. Preset `blog` didefinisikan di `config/purifier.php`. **External Library**
 - `Sentry\Laravel\Integration` (package `sentry/sentry-laravel`) — register exception handler di `bootstrap/app.php` via `Integration::handles($exceptions)`. Aktif kalau env `SENTRY_LARAVEL_DSN` di-set; kosong = no-op silently (aman untuk local dev). **External Library**
+- `Resend` (package `resend/resend-laravel`) — mail transport di production. Config via `MAIL_MAILER=resend` + `RESEND_API_KEY`. Di local dev pakai `MAIL_MAILER=log`. **External Library**
 
 ## Traits
 - `app/Traits/GeneratesUniqueSlug.php` — `generateUniqueSlug(title, modelClass, excludeId=null)`: loop increment hingga slug unik. Dipakai oleh Admin\PostController, Author\PostController, Admin\AiPostController. **Helper/Trait**
@@ -322,11 +339,11 @@ project-blog/
 
 ## Models
 - `app/Models/User.php` — `posts(), comments(), media(), isAdmin(), isAuthor(), getAvatarUrlAttribute()`. Cast `password: hashed`, `email_verified_at: datetime`. Fillable: name, email, password, avatar, bio, role. **Model**
-- `app/Models/Post.php` — Relasi: `user, category, tags(belongsToMany), comments, approvedComments`. Scopes: `published, featured, pending, rejected, draft, search`. Helpers: `isPending/Rejected/Draft/Published, canSubmitForReview`. Accessors: `featured_image_url, reading_time`. Booted: auto-generate slug via `Str::slug`. **Model**
+- `app/Models/Post.php` — Relasi: `user, category, tags(belongsToMany), comments, approvedComments`. Scopes: `published, featured, pending, rejected, draft, search`. Helpers: `isPending/Rejected/Draft/Published, canSubmitForReview`. Accessors: `featured_image_url` (fallback ke `public/images/post-default.svg`), `reading_time`. Booted: auto-generate slug via `Str::slug`. **Model**
 - `app/Models/Category.php` — `posts(), publishedPosts()`. Booted: auto-slug. **Model**
 - `app/Models/Tag.php` — `posts()`. Booted: auto-slug. **Model**
 - `app/Models/Comment.php` — `post, user, parent, replies (approved only)`. Accessor `author_display_name`. Cast `is_approved: boolean`. **Model**
-- `app/Models/Media.php` — `user()`. Accessors `url, size_formatted, dimensions`. **Model**
+- `app/Models/Media.php` — `user()`. Accessors `url, size_formatted, dimensions`. Trait `HasFactory`. **Model**
 - `app/Models/Setting.php` — static `get(key, default)` + `set(key, value)` via `updateOrCreate`. Simple key-value store. **Model**
 
 ## Providers
@@ -337,19 +354,21 @@ project-blog/
 - `app/View/Components/GuestLayout.php` — pointer ke `layouts.guest`. **View/UI**
 
 ## Views (Blade, ringkas per direktori)
-- `resources/views/layouts/` — `app, guest` (Breeze), `admin, author, blog, navigation`. **View/UI**
-- `resources/views/components/` — Breeze form/UI (`text-input, primary-button, modal, dropdown, ...`) + custom `media-picker`, `media-picker-modal`, `seo` (meta tags). **View/UI**
-- `resources/views/home.blade.php` — landing page. **View/UI**
+- `resources/views/layouts/` — `app, guest` (Breeze), `admin, author, blog, navigation`. Admin + author include TinyMCE + media-picker-modal. **View/UI**
+- `resources/views/components/` — Breeze form/UI (`text-input, primary-button, modal, dropdown, ...`) + custom `media-picker` (prop: name, apiUrl, uploadUrl, currentImage), `media-picker-modal` (tab Gallery + Upload, AJAX upload via fetch, auto-select, event dispatch), `seo` (meta tags). **View/UI**
+- `resources/views/partials/` — `favicon.blade.php` (cache-busting via filemtime), `tinymce.blade.php` (TinyMCE init + media-picker integration via file_picker_callback). **View/UI**
+- `resources/views/errors/` — `layout.blade.php` (shared), `404, 403, 419, 429, 500, 503` (brand-styled, noindex). **View/UI**
+- `resources/views/home.blade.php` — landing page (hero, featured, latest, categories). **View/UI**
 - `resources/views/posts/` — `index, show, by-category, by-tag`. **View/UI**
 - `resources/views/pages/` — `about, contact` (static, via `Route::view`). **View/UI**
-- `resources/views/admin/` — `dashboard`, `posts/{index,create,edit,ai-generate}`, `users/*`, `categories/*`, `tags/*`, `comments/index`, `media/index`. **View/UI**
-- `resources/views/author/` — `dashboard`, `posts/*`, `comments/index`, `media/index`. **View/UI**
+- `resources/views/admin/` — `dashboard`, `posts/{index,create,edit,ai-generate}`, `users/*`, `categories/*`, `tags/*`, `comments/index`, `media/index`. Form create/edit/ai-generate pakai TinyMCE WYSIWYG editor + media-picker. **View/UI**
+- `resources/views/author/` — `dashboard`, `posts/*`, `comments/index`, `media/index`. Form create/edit pakai TinyMCE + media-picker. **View/UI**
 - `resources/views/auth/` — Breeze forms (login, register, forgot/reset/confirm password, verify-email). **View/UI**
 - `resources/views/profile/` — `edit` + 3 partials (update-profile, update-password, delete-user). **View/UI**
 - `resources/views/sitemap.blade.php` — template XML sitemap. **View/UI**
 
 ## Config (custom yang perlu diperhatikan)
-- `config/services.php` — tambahan key `gemini` (api_key, model). **Config**
+- `config/services.php` — tambahan key `gemini` (api_key, model) + `resend` (key). **Config**
 - `config/purifier.php` — konfigurasi HTMLPurifier. Preset `blog` custom (whitelist h2-h4, p, ul/ol, blockquote, code/pre, a, img, strong/em; target=_blank + rel=nofollow pada link; scheme hanya http/https/mailto). Dipakai oleh Admin/Author PostController + AiPostController. **Config**
 - `config/database.php` — konfigurasi `pgsql` tersedia (default port 5432, sslmode `prefer`). **Config**
 - `config/auth.php` — guard default `web`, provider `users` → model `App\Models\User`. **Config**
@@ -359,16 +378,16 @@ project-blog/
 # Data & Config
 
 ## Lokasi Konfigurasi
-- `.env` / `.env.example` — env utama. Di `.env.example`: `DB_CONNECTION=sqlite`, tapi migration `2024_01_02_000001` pakai PostgreSQL syntax (`CHECK` constraint via raw SQL). **Inconsistency yang perlu dicatat** — lihat Risks.
-- `config/*.php` — 10 config standar + customisasi minimal di `services.php`.
-- `bootstrap/app.php` — register middleware alias (`admin`, `author`), append `SetLocale` ke web grup, tanpa schedule / console routes.
+- `.env` / `.env.example` — env utama. `.env.example` default `DB_CONNECTION=pgsql`, `MAIL_MAILER=log` (production pakai `resend`), `SENTRY_LARAVEL_DSN=` (kosong = no-op).
+- `config/*.php` — 11 config (app, auth, cache, database, filesystems, logging, mail, purifier, queue, services, session).
+- `bootstrap/app.php` — register middleware alias (`admin`, `author`), append `SetLocale` + `SecurityHeaders` ke web grup, Sentry exception handler via `Integration::handles()`, tanpa schedule / console routes.
 
 ## Konfigurasi PostgreSQL
-- Driver aktif via `env('DB_CONNECTION')`. Di `.env.example` = `sqlite`, di `config/database.php` default fallback = `sqlite`.
+- Driver aktif: `DB_CONNECTION=pgsql` (default di `.env.example` dan `.env`).
 - Koneksi `pgsql` di `config/database.php`:
-  - host default `127.0.0.1`, port `5432`, database `laravel`, `search_path: public`, `sslmode: prefer`
+  - host default `127.0.0.1`, port `5432`, database `blog_laravel`, `search_path: public`, `sslmode: prefer`
   - charset `utf8`
-- Hanya satu koneksi custom; tidak ada multi-tenant DB.
+- Hanya satu koneksi; tidak ada multi-tenant DB.
 
 ## Skema Data (13 migrasi)
 
@@ -426,8 +445,9 @@ Comment ──self_ref── Comment (parent_id, cascade)
 - **Queue**: driver `database`, tabel `jobs`. Dipanggil di composer script `dev` via `php artisan queue:listen`. Tapi **tidak ada Job class** di `app/Jobs`.
 - **Cache**: driver `database`, tabel `cache`.
 - **Session**: driver `database`, tabel `sessions`, serialization `json`, same_site `lax`.
-- **Mail**: default `log` (belum terhubung ke SMTP).
+- **Mail**: `resend` di production (package `resend/resend-laravel`), `log` di local dev. Dipakai oleh Breeze (email verification, password reset).
 - **Broadcast**: `log`.
+- **Logging**: channel `daily`, retention 14 hari (`LOG_DAILY_DAYS=14`).
 
 ---
 
@@ -492,7 +512,7 @@ Raw query lain (bukan PG-specific, kompatibel MySQL/SQLite):
 
 ## Route Protection Summary
 - Public: `/`, `/blog*`, `/category/*`, `/tag/*`, `/about`, `/contact`, `/sitemap.xml`, `/robots.txt`, `/locale/*`
-- Throttled: `POST /blog/{post}/comments` (6/min), `verification.verify` (signed + 6,1), `verification.send` (6,1)
+- Throttled: `POST /blog/{post}/comments` (6/min), `POST /admin/ai-posts/generate` (5/10min), `verification.verify` (signed + 6,1), `verification.send` (6,1)
 - `auth`: `/profile/*`, verify-email, confirm-password, password update, logout
 - `guest`: register, login, password reset
 - `auth,author` prefix `/author`
@@ -525,19 +545,16 @@ Raw query lain (bukan PG-specific, kompatibel MySQL/SQLite):
 
 # Risks / Blind Spots
 
-- **Ketidakkonsistenan DB driver** (diperbarui 2026-05-12 — sudah diperbaiki di level dokumentasi):
-  - `.env.example` → sekarang `DB_CONNECTION=pgsql` (sesuai kenyataan project).
-  - `composer.json` → script `post-create-project-cmd` yang buat `database/database.sqlite` sudah dihapus.
-  - `README.md` → section "Database Requirement" eksplisit menyebut PostgreSQL wajib.
-  - Migration `2024_01_02_000001` masih PostgreSQL-only (by design). SQLite/MySQL tidak didukung.
-- **`queue:listen` ada di script dev, tapi tidak ada Job class** di `app/Jobs/`. Artinya saat ini queue kosong. Future integrations (misal async Gemini call) belum ada.
-- **Tidak ada scheduler** di `bootstrap/app.php` (tidak ada `withSchedule`), dan `routes/console.php` hanya berisi command `inspire`. Tidak ada scheduled task.
-- **Tidak ada API routes** (`routes/api.php` tidak ada, tidak didaftarkan di `bootstrap/app.php`). `MediaController::json` & `CommentController` return JSON tetapi melalui web route.
-- **`rejection_reason`** ditambahkan di migration `2024_01_02_000001` via `Schema::table(..., after('status'))`. `after()` valid di MySQL tapi diabaikan di PostgreSQL/SQLite — aman, tapi perlu diperhatikan.
-- **`OPTIMIZATION-REPORT.md`** ada di root — belum dibaca; mungkin memuat catatan perubahan yang relevan (tidak masuk scope peta saat ini).
-- **Route `/robots.txt`** bentrok dengan file statis di `public/robots.txt` bawaan Laravel. Yang akan menang: file statis di webserver (karena di-serve sebelum PHP). Route closure `->name` tidak terpanggil di environment dengan `public/robots.txt`. **Perlu dicek manual** apakah file `public/robots.txt` masih ada.
-- **Blade `media-picker`** di views tapi implementasi JS-nya tidak bisa diverifikasi tanpa membaca file blade. Diasumsikan Alpine.js-based.
-- **Locale switch** hanya terima `id|en`. Folder `lang/` ada tapi isinya tidak di-scan — kemungkinan berisi translasi.
+- **DB driver sudah konsisten**: `.env.example` = `DB_CONNECTION=pgsql`, `composer.json` script sqlite dihapus, `README.md` + `DEPLOYMENT.md` menyebut PostgreSQL wajib. Migration `2024_01_02_000001` PostgreSQL-only by design.
+- **`queue:listen` ada di script dev, tapi tidak ada Job class** di `app/Jobs/`. Queue kosong saat ini. Breeze email verification mungkin di-queue tergantung config — pastikan queue worker aktif di production.
+- **Tidak ada scheduler** di `bootstrap/app.php` (tidak ada `withSchedule`), dan `routes/console.php` hanya berisi command `inspire`.
+- **Tidak ada API routes** (`routes/api.php` tidak ada). `MediaController::json` return JSON melalui web route (CSRF protected).
+- **`rejection_reason`** ditambahkan via `after('status')` — `after()` diabaikan di PostgreSQL (aman, kolom tetap dibuat di akhir tabel).
+- **Route `/robots.txt`** bentrok dengan file statis `public/robots.txt` jika ada. Saat ini `public/robots.txt` tidak ada (cuma `favicon.ico`), jadi route closure yang menang.
+- **Media picker modal** (Alpine.js-based) — Tab Gallery + Upload, AJAX upload via `fetch()`. Upload file masuk ke Media Library (tabel `media` + disk `public/media/`). Terintegrasi dengan TinyMCE via event `media-picked-_tinymce_image`.
+- **TinyMCE WYSIWYG** — self-hosted di `public/vendor/tinymce/` (11 MB, gitignored, di-copy dari `node_modules` saat deploy). `valid_elements` config mirror Purifier preset 'blog' — double-layer sanitization. Image insert via `file_picker_callback` buka media modal.
+- **Locale switch** hanya terima `id|en`. Folder `lang/` ada tapi isinya tidak di-scan.
 - **Dynamic route resolution**: tidak ada. Semua route statis.
-- **Macro / magic method**: tidak ditemukan di kode aplikasi; hanya Eloquent standar (scopes, accessors, boot hooks).
-- **Package behavior di `vendor/`**: tidak dibaca. Breeze controllers tidak dimodifikasi dari default — perilaku sesuai dokumentasi Laravel 13 + Breeze 2.4.
+- **Macro / magic method**: tidak ditemukan di kode aplikasi.
+- **Package behavior di `vendor/`**: tidak dibaca. Breeze controllers dimodifikasi minimal (redirect ke `home` bukan `dashboard`).
+- **Lihat juga**: `OPTIMIZATION-REPORT.md` untuk backlog item yang belum dieksekusi (#9 indexes, #11 cache, #12 refactor, #14 typography).
