@@ -64,6 +64,8 @@ class AiPostController extends Controller
             'category_id' => 'nullable|exists:categories,id',
             'excerpt' => 'nullable|max:500',
             'body' => 'required',
+            'featured_image' => 'nullable|image|mimes:jpeg,png,jpg,gif,webp|max:2048',
+            'featured_image_path' => 'nullable|string|exists:media,path',
             'status' => 'required|in:draft,published',
             'is_featured' => 'boolean',
             'tags' => 'nullable|array',
@@ -73,6 +75,12 @@ class AiPostController extends Controller
         $validated['body'] = Purifier::clean($validated['body'], 'blog');
         $validated['user_id'] = auth()->id();
         $validated['slug'] = $this->generateUniqueSlug($validated['title'], Post::class);
+
+        if ($request->filled('featured_image_path')) {
+            $validated['featured_image'] = $request->featured_image_path;
+        } elseif ($request->hasFile('featured_image')) {
+            $validated['featured_image'] = $request->file('featured_image')->store('posts', 'public');
+        }
 
         if ($validated['status'] === 'published') {
             $validated['published_at'] = now();

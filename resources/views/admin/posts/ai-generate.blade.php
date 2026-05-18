@@ -46,7 +46,7 @@
         </div>
     @else
         {{-- Step 2: Preview & Save --}}
-        <form action="{{ route('admin.ai-posts.store') }}" method="POST">
+        <form action="{{ route('admin.ai-posts.store') }}" method="POST" enctype="multipart/form-data" @submit="$el.setAttribute('data-submitting', '')">
             @csrf
             <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 {{-- Main Content --}}
@@ -143,6 +143,18 @@
                                 </label>
                             @endforeach
                         </div>
+                    </div>
+
+                    {{-- Featured Image --}}
+                    <div class="bg-white dark:bg-gray-800 rounded-2xl p-6 border border-gray-100 dark:border-gray-700">
+                        <h3 class="font-semibold text-gray-900 dark:text-white mb-4">{{ __('Gambar Utama') }}</h3>
+                        <x-media-picker name="featured_image_path" :apiUrl="route('admin.media.json')" />
+                        <div class="mt-3 pt-3 border-t border-gray-100 dark:border-gray-700">
+                            <p class="text-xs text-gray-400 mb-2">{{ __('Atau upload langsung:') }}</p>
+                            <input type="file" name="featured_image" accept="image/*" class="w-full text-sm text-gray-500 dark:text-gray-400 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-primary-50 file:text-primary-700 dark:file:bg-primary-900/30 dark:file:text-primary-300 hover:file:bg-primary-100">
+                        </div>
+                        @error('featured_image') <p class="text-red-500 text-xs mt-1">{{ $message }}</p> @enderror
+                        @error('featured_image_path') <p class="text-red-500 text-xs mt-1">{{ $message }}</p> @enderror
                     </div>
                 </div>
             </div>
