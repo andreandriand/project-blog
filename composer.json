@@ -42,7 +42,9 @@
             "@php artisan key:generate",
             "@php artisan migrate --force",
             "npm install --ignore-scripts",
-            "npm run build"
+            "npm run build",
+            "@php -r \"is_dir('public/vendor/tinymce') || mkdir('public/vendor/tinymce', 0755, true);\"",
+            "@php -r \"exec(PHP_OS_FAMILY === 'Windows' ? 'xcopy node_modules\\\\tinymce public\\\\vendor\\\\tinymce /E /Y /Q' : 'cp -r node_modules/tinymce/* public/vendor/tinymce/');\""
         ],
         "dev": [
             "Composer\\Config::disableProcessTimeout",

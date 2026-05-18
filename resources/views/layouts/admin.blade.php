@@ -154,6 +154,7 @@
     </div>
 
     <x-media-picker-modal />
+    @include('partials.tinymce')
     @stack('scripts')
 </body>
 </html>

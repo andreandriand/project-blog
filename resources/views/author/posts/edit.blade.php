@@ -107,7 +107,7 @@
                 {{-- Featured Image --}}
                 <div class="bg-white dark:bg-gray-800 rounded-2xl p-6 border border-gray-100 dark:border-gray-700">
                     <h3 class="font-semibold text-gray-900 dark:text-white mb-4">{{ __('Gambar Utama') }}</h3>
-                    <x-media-picker name="featured_image_path" :apiUrl="route('author.media.json')" :currentImage="$post->featured_image ? asset('storage/' . $post->featured_image) : null" />
+                    <x-media-picker name="featured_image_path" :apiUrl="route('author.media.json')" :uploadUrl="route('author.media.store')" :currentImage="$post->featured_image ? asset('storage/' . $post->featured_image) : null" />
                     <div class="mt-3 pt-3 border-t border-gray-100 dark:border-gray-700">
                         <p class="text-xs text-gray-400 mb-2">{{ __('Atau upload langsung:') }}</p>
                         <input type="file" name="featured_image" accept="image/*" class="w-full text-sm text-gray-500 dark:text-gray-400 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-emerald-50 file:text-emerald-700 dark:file:bg-emerald-900/30 dark:file:text-emerald-300 hover:file:bg-emerald-100">
